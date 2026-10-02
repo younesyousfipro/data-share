@@ -1,0 +1,406 @@
+openapi: 3.0.3
+
+info:
+  title: DataShare API
+  version: 0.1.0
+  description: |
+    Secure file transfer prototype (US01 to US06).
+
+    Design-first contract, used as documentation only: no code is generated from
+    it. Controllers and DTOs are checked against this file (see docs/decisions.md).
+
+    Routes are grouped by access level:
+    - `/api/auth/**` and `/api/download/**` are public
+    - `/api/files/**` requires a JWT: `Authorization: Bearer <token>`
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: auth
+    description: Account creation and login (US03, US04)
+  - name: files
+    description: Owner's files, JWT required (US01, US05, US06)
+  - name: download
+    description: Public access through a share link (US02)
+
+paths:
+
+  /api/auth/register:
+    post:
+      tags: [auth]
+      summary: Create an account (US03)
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created. The user then logs in; no token is returned.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+
+  /api/auth/login:
+    post:
+      tags: [auth]
+      summary: Log in and get a JWT (US04)
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Credentials accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: |
+            Unknown email or wrong password. The message is the same in both
+            cases, so that registered emails cannot be guessed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+
+  /api/files:
+    get:
+      tags: [files]
+      summary: List my files (US05)
+      description: |
+        All files of the authenticated account, expired ones included.
+        The account is read from the JWT, never from a parameter.
+        Tabs (all / active / expired) are filtered client-side.
+      operationId: listMyFiles
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Files of the authenticated account
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [files]
+      summary: Upload a file (US01)
+      description: |
+        The file is streamed to disk under its UUID; the original name is kept
+        in the database. The share link is `/download/{id}` on the front.
+      operationId: uploadFile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadRequest'
+      responses:
+        '201':
+          description: File stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: File larger than 1 GB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+
+  /api/files/{id}:
+    delete:
+      tags: [files]
+      summary: Delete one of my files (US06)
+      description: |
+        Deletes the database row, then the file on disk. Irreversible.
+        A file owned by another account gets the same 404 as an unknown file,
+        so its existence is not disclosed.
+      operationId: deleteFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '204':
+          description: File and metadata deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/download/{id}:
+    get:
+      tags: [download]
+      summary: Get file metadata before download (US02)
+      description: Public. Shows what the recipient is about to download.
+      operationId: getFileMetadata
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: File metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileMetadataResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Gone'
+
+    post:
+      tags: [download]
+      summary: Download the file (US02)
+      description: |
+        Public. The password, when the file is protected, travels in the body,
+        never in the URL. The body may be omitted for an unprotected file.
+      operationId: downloadFile
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DownloadRequest'
+      responses:
+        '200':
+          description: File content, streamed
+          headers:
+            Content-Disposition:
+              description: Original file name
+              schema:
+                type: string
+                example: attachment; filename="vacances.mp4"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: |
+            Missing or wrong file password. Not 401: the front interceptor
+            treats 401 as an expired session and logs the user out.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Gone'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Signed HS256, subject = account email.
+
+  parameters:
+    FileId:
+      name: id
+      in: path
+      required: true
+      description: File UUID, also used as share link and disk file name
+      schema:
+        type: string
+        format: uuid
+        example: 3f2b9c1e-8d4a-4c3b-9f1e-2a6b7c8da7d4
+
+  responses:
+    BadRequest:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+    Unauthorized:
+      description: Missing, invalid or expired JWT
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+    NotFound:
+      description: Unknown file, or file owned by another account
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+    Gone:
+      description: File expired, no longer downloadable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+
+  schemas:
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: marie@mail.fr
+        password:
+          type: string
+          minLength: 8
+          example: s3cretPass
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: marie@mail.fr
+        password:
+          type: string
+          example: s3cretPass
+
+    LoginResponse:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: 'JWT to send as `Authorization: Bearer <token>`'
+          example: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtYXJpZUBtYWlsLmZyIn0.sig
+
+    UploadRequest:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: |
+            1 GB max. Forbidden extensions (case-insensitive, last extension
+            only, so `invoice.pdf.exe` is rejected): exe, bat, cmd, com, msi,
+            sh, ps1, vbs, jar. A file without extension is accepted.
+        password:
+          type: string
+          minLength: 6
+          description: Optional. Required at download time when set.
+        expirationDays:
+          type: integer
+          minimum: 1
+          maximum: 7
+          default: 7
+
+    FileStatus:
+      type: string
+      enum: [ACTIVE, EXPIRING_SOON, EXPIRED]
+      description: |
+        Computed from `expiresAt`, never stored.
+        EXPIRING_SOON when less than 24 hours remain.
+
+    FileResponse:
+      type: object
+      description: A file as seen by its owner (upload result, history).
+      required: [id, originalName, sizeBytes, uploadedAt, expiresAt, status, passwordProtected]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3f2b9c1e-8d4a-4c3b-9f1e-2a6b7c8da7d4
+        originalName:
+          type: string
+          example: vacances.mp4
+        sizeBytes:
+          type: integer
+          format: int64
+          example: 2726297
+        uploadedAt:
+          type: string
+          format: date-time
+          example: '2026-10-02T14:00:00Z'
+        expiresAt:
+          type: string
+          format: date-time
+          example: '2026-10-09T14:00:00Z'
+        status:
+          $ref: '#/components/schemas/FileStatus'
+        passwordProtected:
+          type: boolean
+          description: True when a password is required; the hash is never exposed.
+          example: false
+
+    FileMetadataResponse:
+      type: object
+      description: |
+        A file as seen by a recipient. No id nor upload date: a public
+        response discloses as little as possible.
+      required: [originalName, sizeBytes, expiresAt, passwordProtected]
+      properties:
+        originalName:
+          type: string
+          example: vacances.mp4
+        sizeBytes:
+          type: integer
+          format: int64
+          example: 2726297
+        expiresAt:
+          type: string
+          format: date-time
+          example: '2026-10-09T14:00:00Z'
+        passwordProtected:
+          type: boolean
+          example: true
+
+    DownloadRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          description: Required only when the file is protected.
+          example: secret1
+
+    ErrorDetails:
+      type: object
+      description: Single error format for every endpoint (same as P2).
+      required: [timestamp, message]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-10-03T10:15:30'
+        message:
+          type: string
+          example: This file has expired
+        details:
+          type: string
+          example: uri=/api/download/3f2b9c1e-8d4a-4c3b-9f1e-2a6b7c8da7d4
