@@ -13,4 +13,5 @@ mise en production. Chaque ligne renvoie à la décision qui en donne le context
 | **Rétention des métadonnées** : effacer la fiche après une durée fixée | volume de fiches expirées en hausse | fiches conservées sans limite | US10 partielle |
 | **Purge des orphelins** : effacer les fichiers du disque sans fiche en base | échecs de suppression constatés dans les logs | orphelins journalisés, non effacés | Cohérence disque / base |
 | **Jeton de partage** distinct du fichier : révoquer, régénérer ou multiplier les liens | besoin de couper un accès sans supprimer le fichier | lien = UUID du fichier ; la spec ne prévoit pas de révocation, seule la suppression (US06) coupe l'accès | Lien de partage = identifiant du fichier |
+| **URL de téléchargement signée** à courte durée : le navigateur télécharge seul, directement sur disque | fichiers lourds, usage mobile | fichier entier en mémoire du navigateur (`HttpClient`) | Téléchargement reçu par HttpClient |
 | **Clé de signature JWT** dans un gestionnaire de secrets | toute mise en ligne | clé dans la configuration locale | Back : Spring Boot (voir `conception/choix-techno.md`) |

@@ -226,3 +226,79 @@ déjà l'exigence d'identifiant non prédictible.
 Conforme à la spec, qui ne prévoit aucune révocation : seule la suppression (US06)
 coupe l'accès. Perspective d'évolution : jeton séparé pour régénérer ou révoquer un lien, ou
 créer plusieurs liens pour un même fichier.
+
+---
+
+## 2026-10-03 — OpenAPI en usage documentaire, sans génération de code
+
+**Décidé :** `openapi.yaml` sert de **référence de conception** et de documentation.
+Les controllers et les DTO sont écrits à la main. La conformité est contrôlée à
+l'étape 6, en comparant le contrat au Swagger UI que springdoc génère depuis le code.
+**Écarté :** génération du code depuis le contrat (openapi-generator : interfaces
+Spring et DTO côté back, services et modèles TypeScript côté front).
+**Pourquoi :** choix volontaire, pour ne pas ajouter de complexité : un générateur de
+plus à configurer et du code généré à expliquer, pour une dizaine de routes seulement.
+**Conséquence assumée :** le contrat et le code peuvent diverger entre deux contrôles.
+Perspective : générer le code depuis le contrat pour rendre toute divergence impossible.
+
+---
+
+## 2026-10-03 — Routes regroupées par niveau d'accès
+
+**Décidé :** `/api/auth/**` et `/api/download/**` publics, `/api/files/**` sous JWT.
+**Écarté :** routes publiques et protégées mêlées sous `/api/files/{id}` (accès
+public en `GET`, protégé en `DELETE`).
+**Pourquoi :** la règle de sécurité tient en une ligne ; la liste des routes publiques
+de l'intercepteur front devient deux préfixes. Sans cette exclusion, un destinataire
+porteur d'un JWT expiré recevrait un `401` sur un téléchargement public (piège déjà
+rencontré au P2 sur `/api/login`).
+**Conséquence assumée :** deux préfixes pour une même ressource, le fichier, selon
+qu'on en est propriétaire ou destinataire.
+
+---
+
+## 2026-10-03 — Codes et format d'erreur
+
+**Décidé :** format d'erreur du P2 (`timestamp`, `message`, `details`) pour toutes
+les routes. `404` pour un fichier inconnu **ou d'un autre compte** ; `410` pour un
+fichier expiré ; `403` pour un mot de passe de fichier faux ; `401` avec un message
+unique que l'email ou le mot de passe soit faux ; `409` pour un email déjà pris.
+**Écarté :** format normalisé RFC 9457 (`ProblemDetail` de Spring), plus standard mais
+sans gain pour un front écrit par nous ; `403` pour le fichier d'un autre compte
+(confirmerait son existence) ; `401` pour le mot de passe de fichier (l'intercepteur
+déconnecterait l'utilisateur) ; messages distincts à la connexion (énumération des
+comptes inscrits).
+**Pourquoi :** continuité avec le P2, et des codes qui n'en disent pas plus que
+nécessaire à un attaquant.
+**Conséquence assumée :** l'inscription révèle encore si un email est inscrit (`409`) ;
+le contourner exigerait un envoi d'email, absent du MVP. À signaler dans `SECURITY.md`.
+
+---
+
+## 2026-10-03 — Téléchargement reçu par HttpClient (blob)
+
+**Décidé :** le front reçoit le fichier par `HttpClient` puis propose de l'enregistrer.
+**Écarté :** URL de téléchargement signée à courte durée, que le navigateur
+téléchargerait seul (demande un mécanisme de jeton supplémentaire).
+**Pourquoi :** gestion d'erreur identique au reste de l'appli (`403`, `410`) et barre
+de progression fournie par Angular ; le serveur, lui, envoie bien en streaming.
+**Conséquence assumée :** le fichier entier tient dans la mémoire du navigateur (jusqu'à
+1 Go) : acceptable sur ordinateur, risqué sur mobile. À mentionner dans `PERF.md`.
+
+---
+
+## 2026-10-03 — Règles de validation précisées
+
+**Décidé :**
+- extensions refusées : `exe`, `bat`, `cmd`, `com`, `msi`, `sh`, `ps1`, `vbs`, `jar` ;
+  casse ignorée, seule la dernière extension compte (`facture.pdf.exe` refusé), fichier
+  sans extension accepté
+- statut `EXPIRING_SOON` quand il reste moins de 24 h (alerte orange de la maquette)
+- durée `expirationDays` : entier de 1 à 7, **7 par défaut** (spec)
+
+**Écarté :** liste blanche d'extensions (trop restrictive pour un outil de partage
+généraliste) ; défaut « une journée » de la maquette (contredit la spec).
+**Pourquoi :** la spec laisse la liste « à définir selon la politique de sécurité » :
+on vise les exécutables et scripts, vecteurs classiques de logiciels malveillants.
+**Conséquence assumée :** une liste noire n'est jamais complète, et l'extension se
+renomme facilement ; une vraie protection passerait par un antivirus côté serveur.

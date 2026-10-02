@@ -179,13 +179,13 @@ sequenceDiagram
   participant D as Disque
 
   R->>F: ouvre le lien /download/UUID (page du front)
-  F->>A: GET /api/files/UUID, sans JWT (route publique)
+  F->>A: GET /api/download/UUID, sans JWT (route publique)
   A->>B: lit la fiche : métadonnées seules, pas le contenu
-  A-->>F: nom, taille, expiration, protégé ? (ou 404 / expiré)
+  A-->>F: nom, taille, expiration, protégé ? (ou 404 inconnu, 410 expiré)
   F-->>R: métadonnées, champ mot de passe si protégé
   R->>F: clique sur Télécharger
-  F->>A: POST /api/files/UUID/download, mot de passe dans le corps
-  A->>A: expiré ? mot de passe correct (BCrypt) ?
+  F->>A: POST /api/download/UUID, mot de passe dans le corps
+  A->>A: expiré ? sinon 410. Mot de passe correct (BCrypt) ? sinon 403
   A->>D: lit le fichier
   A-->>F: fichier en streaming, nom d'origine
   F-->>R: enregistrement du fichier
