@@ -1,0 +1,6 @@
+% DataShare MCD - source for Mocodo (mocodo.net)
+% Export both renderings to this folder: mcd.svg and mld.svg.
+
+ACCOUNT: account_id, email, password_hash
+OWNS, 0N ACCOUNT, 11 SHARED_FILE
+SHARED_FILE: file_id, original_name, size_bytes, password_hash, uploaded_at, expires_at
