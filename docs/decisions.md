@@ -22,8 +22,10 @@ Format : date, décision, options écartées, raison, conséquence acceptée.
 
 ## 2026-09-30 — Stockage des fichiers : système de fichiers local
 
-**Décidé :** stockage sur le système de fichiers local, servi par un conteneur Docker
-avec volume monté. Accès isolé derrière une interface `FileStorage`.
+**Décidé :** stockage dans un **dossier local du serveur**, dont le chemin est
+configurable. Accès isolé derrière une interface `FileStorage`.
+*(Corrigé le 2026-10-02 : seul PostgreSQL est conteneurisé, le back tourne hors
+Docker ; il n'y a donc pas de volume monté pour les fichiers.)*
 
 **Écarté :**
 - **AWS S3** pas de compte, pas de pratique du
@@ -37,9 +39,9 @@ suffisant pour la volumétrie d'un prototype. L'interface `FileStorage` conserve
 possibilité de basculer vers un stockage objet sans toucher à la logique métier.
 
 **Conséquence assumée :** pas de redondance, pas de scalabilité horizontale — le
-serveur détient les fichiers. À documenter dans `MAINTENANCE.md`. Les fichiers
-doivent être sur un **volume Docker monté**, sinon ils disparaissent au redémarrage
-du conteneur.
+serveur détient les fichiers. À documenter dans `MAINTENANCE.md`. Le jour où le
+back sera conteneurisé, ce dossier devra devenir un **volume Docker**, sinon les
+fichiers disparaîtront à chaque redémarrage du conteneur.
 
 **Contexte :** environnements cloud pratiqués par ailleurs (Azure au travail, GCP en
 personnel) ; les spécifications n'autorisent que local ou AWS S3.
