@@ -128,8 +128,10 @@ maquette serait toujours vide) ; pas de purge (le message « il n'est plus stock
 chez nous » serait faux).
 **Pourquoi :** fidélité à la maquette pour un coût marginal ; tâche d'exploitation
 utile au disque, pertinente pour un parcours DevOps.
-**Conséquence assumée :** écart assumé avec US10 sur les métadonnées. Perspective
-d'évolution : supprimer les métadonnées après une durée de rétention.
+**Conséquence assumée :** écart assumé avec US10 sur les métadonnées. Perspectives
+d'évolution : supprimer les métadonnées après une durée de rétention ; en production,
+sortir la purge de l'API (règle de cycle de vie du stockage objet, ou tâche planifiée
+indépendante) pour qu'elle ne dépende ni du démarrage ni du nombre d'instances du back.
 
 ---
 
@@ -205,6 +207,22 @@ pourrait aussi effacer les fichiers du disque sans fiche en base.
 **Écarté :** autoriser l'origine `localhost:4200` dans Spring Security (CORS).
 **Pourquoi :** le navigateur ne voit qu'une origine, comme en production où front et
 API sont servis sous le même domaine derrière un reverse proxy. Une règle CORS
-n'existerait que pour le dev et ouvrirait l'API à une origine supplémentaire.
+n'existerait que pour le dev et assouplirait, pour une origine de plus, la protection
+que le navigateur offre à l'utilisateur.
 **Conséquence assumée :** le front doit être lancé avec le proxy (`ng serve` configuré
 dans `angular.json`) ; un appel direct à `:8080` depuis le navigateur sera bloqué.
+
+---
+
+## 2026-10-03 — Lien de partage = identifiant du fichier
+
+**Décidé :** le lien de partage est `/download/{file_id}` : l'UUID du fichier sert à
+la fois de clé en base, de nom sur le disque et de lien (modèle Google Drive).
+**Écarté :** un jeton de partage distinct du fichier (modèle Dropbox), qui demanderait
+une colonne ou une table de plus.
+**Pourquoi :** une seule colonne pour tout, suffisant pour le MVP ; l'UUID satisfait
+déjà l'exigence d'identifiant non prédictible.
+**Conséquence assumée :** un lien ne peut être révoqué qu'en supprimant le fichier.
+Conforme à la spec, qui ne prévoit aucune révocation : seule la suppression (US06)
+coupe l'accès. Perspective d'évolution : jeton séparé pour régénérer ou révoquer un lien, ou
+créer plusieurs liens pour un même fichier.

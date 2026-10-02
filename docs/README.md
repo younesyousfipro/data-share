@@ -8,6 +8,7 @@
 | [`conception/architecture.md`](conception/architecture.md) | briques techniques et flux principaux |
 | [`conception/contrat-interface.md`](conception/contrat-interface.md) | endpoints de l'API (détail dans `openapi.yaml`) |
 | [`conception/choix-techno.md`](conception/choix-techno.md) | justification de la stack |
+| [`perspectives.md`](perspectives.md) | évolutions prévues pour une mise en production |
 | [`brief/`](brief/) | énoncé et spécifications d'origine |
 
 **Ordre de lecture conseillé** : `use-cases.md` → `modele-donnees.md` →

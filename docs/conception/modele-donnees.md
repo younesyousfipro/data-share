@@ -49,13 +49,25 @@ Le MPD (types et contraintes SQL) sera le script Flyway `V1__init.sql`.
 
 | Champ | Exemple | À quoi il sert |
 |---|---|---|
-| `file_id` | `3f2b9c1e-…-a7d4` | **UUID** : identifiant aléatoire de 128 bits, impossible à deviner. Il sert trois fois : clé de la ligne, **lien de partage** (`/d/3f2b9c1e-…`, US02) et **nom du fichier sur le disque**. |
+| `file_id` | `3f2b9c1e-…-a7d4` | **UUID** : identifiant aléatoire de 128 bits, impossible à deviner. Il sert trois fois : clé de la ligne, **lien de partage** (`/download/3f2b9c1e-…`, US02) et **nom du fichier sur le disque**. |
 | `account_id` | `42` | propriétaire (clé étrangère vers `account`). Filtre l'historique (US05) et contrôle le droit de supprimer (US06). |
 | `original_name` | `vacances.mp4` | nom affiché à l'écran et proposé au téléchargement. Jamais utilisé sur le disque. Son extension donne le **type** affiché (icône, US02). |
 | `size_bytes` | `2726297` | taille affichée (« 2,6 Mo »). Contrôlée à l'envoi : ≤ 1 Go. |
 | `password_hash` | `NULL` ou `$2a$10$…` | **vide** si le fichier n'est pas protégé. Sinon, empreinte du mot de passe exigé au téléchargement (US01, US02). |
 | `uploaded_at` | `2026-10-02 14:00` | date d'envoi, affichée dans l'historique (US05). |
 | `expires_at` | `2026-10-09 14:00` | date limite : envoi + 1 à 7 jours (défaut 7). Tout ce qui touche à l'expiration se déduit d'elle. |
+
+### Pourquoi le fichier est rangé sous son UUID et pas son nom
+
+Sur le disque, `vacances.mp4` devient `3f2b9c1e-…-a7d4`. Le nom d'origine reste en
+base (`original_name`) et est rendu au téléchargement.
+
+| Problème évité | Exemple |
+|---|---|
+| deux fichiers de même nom | deux utilisateurs envoient `cv.pdf` : le second écraserait le premier |
+| un nom piégé | `../../config/application.properties` ferait écrire hors du dossier prévu |
+| des caractères gênants | espaces, accents, emojis, noms trop longs |
+
 
 ## Qui utilise quoi
 
@@ -69,7 +81,7 @@ Le MPD (types et contraintes SQL) sera le script Flyway `V1__init.sql`.
 | Suppression (US06) | `account_id` (est-ce le mien ?) | supprime la ligne + le fichier disque |
 | Purge quotidienne (US10 partielle) | `expires_at` dépassée | supprime le fichier disque, **garde la ligne** |
 
-## Ce qui n'est pas stocké, et pourquoi
+## Ce qui n'est pas stocké
 
 | Donnée | Comment on l'obtient | Pourquoi pas une colonne |
 |---|---|---|
@@ -77,12 +89,3 @@ Le MPD (types et contraintes SQL) sera le script Flyway `V1__init.sql`.
 | fichier protégé (cadenas) | `password_hash` non vide | l'information est déjà là |
 | type de fichier | extension de `original_name` | idem |
 
-## Ce qu'on a volontairement laissé de côté
-
-| Écarté | Raison |
-|---|---|
-| un token de lien distinct du `file_id` | un UUID aléatoire est déjà non prédictible ; un second identifiant n'apporte rien au MVP |
-| un nom de stockage distinct | le `file_id` sert de nom de fichier : unique, sans caractère dangereux (`../`) |
-| le type MIME envoyé par le navigateur | non fiable (déclaré par le client) ; le téléchargement est servi en binaire générique, ce qui force l'enregistrement au lieu de l'ouverture dans le navigateur |
-| table des tags, upload anonyme, nom d'utilisateur | hors périmètre (US07, US08) ou absent d'US03 |
-| noms `USER` / `FILE` | `user` est réservé en PostgreSQL ; `File` et `User` existent déjà en Java et Spring Security |
