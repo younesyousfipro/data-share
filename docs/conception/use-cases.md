@@ -4,6 +4,34 @@ Reprises de `../brief/specifications.pdf`. Les écrans cités sont les maquettes
 conservées hors dépôt pour l'instant. La numérotation `USxx` est celle du brief :
 **l'utiliser partout** — commits, tests, documentation, soutenance.
 
+## Qui fait quoi
+
+```mermaid
+flowchart LR
+  V["Visiteur"]
+  C["Utilisateur connecté"]
+  R["Destinataire<br/>(sans compte)"]
+  T["Tâche planifiée"]
+
+  subgraph DataShare
+    US03(["Créer un compte — US03"])
+    US04(["Se connecter — US04"])
+    US01(["Déposer un fichier — US01"])
+    US05(["Consulter l'historique — US05"])
+    US06(["Supprimer un fichier — US06"])
+    US02(["Voir les métadonnées<br/>et télécharger — US02"])
+    US10(["Purger les fichiers expirés — US10 partielle"])
+  end
+
+  V --> US03 & US04
+  C --> US01 & US05 & US06
+  R --> US02
+  T --> US10
+```
+
+Un visiteur devient utilisateur connecté après US04. Le destinataire n'a besoin que
+du lien.
+
 ---
 
 ## MVP — obligatoire
@@ -68,29 +96,4 @@ Un destinataire télécharge un fichier via son lien unique.
 
 ---
 
-## Hors périmètre
 
-US07 à US09 (optionnelles) sont **écartées**. US10 est **partielle** : purge du
-fichier physique, métadonnées conservées. Voir `../decisions.md`, 2026-10-02.
-Écart assumé avec la maquette d'accueil : l'upload exige un compte.
-
----
-
-## Ordre d'implémentation imposé
-
-L'énoncé impose de commencer par **US03 et US04** (gestion utilisateur), même si US01
-paraît plus simple : c'est le socle dont dépendent US01, US05 et US06.
-
-```
-US03 + US04  →  US01  →  US02  →  US05  →  US06
-```
-
-## Rappel — l'US confiée à l'IA
-
-**Une seule US** doit être développée de bout en bout par l'IA, avec des commits
-isolés (`feat(ai): …`) et une section de documentation expliquant les tâches
-confiées, le rôle de supervision et les correctifs apportés.
-
-À choisir tôt : une US suffisamment autonome pour être déléguée proprement, sans être
-le socle dont tout dépend. **US06** (suppression) ou **US05** (historique) sont de
-bons candidats ; US03/US04 sont à éviter, tout en dépend.
