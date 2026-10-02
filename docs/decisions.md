@@ -17,9 +17,6 @@ Format : date, décision, options écartées, raison, conséquence acceptée.
 ---
 
 
-## Questions ouvertes — à éclaircir avec le mentor
-
-
 ## 2026-09-30 — Stockage des fichiers : système de fichiers local
 
 **Décidé :** stockage dans un **dossier local du serveur**, dont le chemin est
@@ -170,3 +167,44 @@ obligatoires, là où MongoDB laisserait ces contrôles au code. Type `TIMESTAMP
 adapté aux dates d'expiration.
 **Conséquence assumée :** changement par rapport au P2 (MySQL) : driver, image
 Docker et module Testcontainers à adapter.
+
+---
+
+## 2026-10-02 — Back rangé par couche, comme au P2
+
+**Décidé :** packages par couche technique : `controller/`, `service/`,
+`repository/`, `model/`, `dto/`, plus `storage/`, `configuration/`, `exception/`.
+**Écarté :** rangement par fonctionnalité (`auth/`, `file/`, chacun avec ses couches).
+**Pourquoi :** structure déjà pratiquée au P2, plus facile à parcourir et à expliquer.
+Avec deux domaines seulement, le rangement par fonctionnalité n'apporte rien de décisif.
+**Conséquence assumée :** les classes d'un même domaine sont réparties entre plusieurs
+dossiers. À revoir si le nombre de domaines augmente.
+
+---
+
+## 2026-10-02 — Cohérence disque / base : ordre des écritures
+
+**Décidé :** à l'envoi, le fichier est écrit sur le disque **avant** l'insertion en base,
+puis effacé si l'insertion échoue. À la suppression, la fiche est supprimée **avant** le
+fichier ; un échec côté disque laisse un orphelin, journalisé.
+**Écarté :** transaction commune disque + base (le système de fichiers n'est pas
+transactionnel) ; ordre inverse (risque d'une fiche pointant vers un fichier absent).
+**Pourquoi :** l'**atomicité** (le A d'ACID, tout ou rien) d'une transaction
+PostgreSQL ne couvre que la base ; l'écriture sur disque y échappe. On applique donc
+la pratique courante de *compensation* : on annule à la main l'étape déjà faite. Un orphelin sur disque est invisible pour l'utilisateur ; une fiche
+sans fichier produit une erreur au téléchargement.
+**Conséquence assumée :** des orphelins restent possibles. Perspective : la purge
+pourrait aussi effacer les fichiers du disque sans fiche en base.
+
+---
+
+## 2026-10-02 — Dev : proxy Angular plutôt que configuration CORS
+
+**Décidé :** en développement, le serveur Angular relaie `/api` vers l'API
+(`proxy.conf.json`). Aucune configuration CORS côté Spring.
+**Écarté :** autoriser l'origine `localhost:4200` dans Spring Security (CORS).
+**Pourquoi :** le navigateur ne voit qu'une origine, comme en production où front et
+API sont servis sous le même domaine derrière un reverse proxy. Une règle CORS
+n'existerait que pour le dev et ouvrirait l'API à une origine supplémentaire.
+**Conséquence assumée :** le front doit être lancé avec le proxy (`ng serve` configuré
+dans `angular.json`) ; un appel direct à `:8080` depuis le navigateur sera bloqué.
