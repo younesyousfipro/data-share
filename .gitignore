@@ -1,0 +1,10 @@
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Secrets
+.env
+
+# Personal drafts, never committed
+drafts/
