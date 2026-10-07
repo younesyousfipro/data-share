@@ -138,6 +138,7 @@ indépendante) pour qu'elle ne dépende ni du démarrage ni du nombre d'instance
 ## 2026-10-02 — Front : Angular (TypeScript)
 
 **Décidé :** front en **Angular / TypeScript**, tests front avec **Jest**.
+*(Révisé le 2026-10-07 : Vitest remplace Jest, voir « Tests front : Vitest ».)*
 **Écarté :** Vue.js (choix initial), React.
 **Pourquoi :** stack déjà pratiquée au P2 (Angular 19) ; les briques éprouvées du P2
 se réutilisent directement (intercepteur JWT, guard, config Jest et Cypress).
@@ -309,7 +310,8 @@ renomme facilement ; une vraie protection passerait par un antivirus côté serv
 
 **Décidé :** Java **25** (LTS) · Spring Boot **4.1** (fixe Spring Security 7.1, Jackson 3.1,
 Flyway 12.4, Testcontainers 2.0, Lombok) · MapStruct 1.6.3 · JaCoCo 0.8.15 · PostgreSQL
-**18** · Angular **22** (TypeScript 6.0) · Node **24** (LTS) · Jest 30 · Cypress 16 · k6 2.
+**18** · Angular **22** (TypeScript 6.0) · Node **24** (LTS) · Vitest 5 *(Jest 30 à
+l'origine, révisé le 2026-10-07)* · Cypress 16 · k6 2.
 Relevé le 2026-10-03 sur start.spring.io, Maven Central, npm et endoflife.date.
 
 ---
@@ -355,3 +357,94 @@ et Docker sont requis.
 start.spring.io (`TestDatashareApplication`), qui démarre une base jetable.
 **Pourquoi :** une seule façon de lancer l'application, avec des données conservées.
 **Conséquence assumée :** copier `.env.example` en `.env` avant le premier lancement.
+
+---
+
+## 2026-10-07 — Socle front généré par Angular CLI
+
+**Décidé :** projet généré par la commande ci-dessous (depuis `data-share/`), commité
+sans modification. Angular CLI est lancé par `npx`, sans installation globale.
+
+```bash
+npx @angular/cli@22.2.2 new datashare --directory front --routing --style css \
+  --ssr false --zoneless --skip-git --ai-config none --package-manager npm
+```
+
+**Écarté :** Angular CLI installé globalement ; rendu côté serveur (SSR) ; `zone.js`.
+**Pourquoi :** une CLI globale finit par différer de la version du projet ; après
+génération, la CLI du projet (`npx ng`) fait foi, comme `./mvnw` côté back. Le SSR
+n'apporte rien à un prototype. Sans `zone.js` (défaut d'Angular 22) : une dépendance de
+moins.
+
+---
+
+## 2026-10-07 — Tests front : Vitest plutôt que Jest
+
+**Décidé :** tests unitaires front avec **Vitest**, le lanceur fourni par Angular 22.
+**Écarté :** Jest via `jest-preset-angular` (choix du 2026-10-02, repris du P2).
+**Pourquoi :** Angular 22 ne propose plus Jest. `jest-preset-angular` est un module
+tiers dont la version est liée à celle d'Angular (`<23.0.0`) : chaque montée de version
+d'Angular attendrait la sienne. Vitest se configure dans `angular.json`, sans fichier
+dédié. Syntaxe des tests quasi identique (`vi.fn()` au lieu de `jest.fn()`).
+**Conséquence assumée :** la config Jest du P2 n'est pas réutilisée ; son point clé
+(mesurer aussi les fichiers sans test) est repris par `coverageInclude`.
+
+---
+
+## 2026-10-07 — Couverture : 70 %, bloquant, mesuré de chaque côté
+
+**Décidé :** seuil de **70 %** sur les quatre métriques (lignes, instructions,
+fonctions, branches), appliqué **séparément** au front (Vitest) et au back (JaCoCo).
+Sous le seuil, la commande échoue. Seuls les fichiers **sans logique** sont exclus
+(front : `app.config.ts`, `app.routes.ts`), chacun justifié dans `TESTING.md`.
+**Écarté :** seuil indicatif non bloquant ; mesure globale front + back ; seuil sur les
+seules lignes.
+**Pourquoi :** l'énoncé fixe 70 % sans préciser la métrique ni le périmètre. Un seuil
+qui ne bloque rien finit ignoré ; une mesure globale laisserait un back bien testé
+masquer un front qui ne l'est pas.
+**Conséquence assumée :** le seuil des branches est le plus exigeant ; s'il devient un
+frein, le limiter aux lignes et instructions, et le tracer ici.
+
+---
+
+## 2026-10-07 — Styles : CSS simple et design tokens en variables CSS
+
+**Décidé :** CSS simple, sans bibliothèque de composants. Les valeurs des maquettes
+(couleurs, tailles, espacements, rayons) sont déclarées une fois en variables CSS dans
+`styles.css` ; les composants y font référence (`var(--color-orange)`).
+**Écarté :** Angular Material (impose son propre style, à l'opposé des maquettes) ;
+Tailwind, SCSS (rien de décisif pour une dizaine d'écrans).
+**Pourquoi :** les maquettes font foi et forment un design system complet : il suffit
+de le transcrire.
+**Conséquence assumée :** les composants de base (bouton, champ, carte) sont écrits à
+la main, y compris leur accessibilité (focus clavier, contrastes).
+
+---
+
+## 2026-10-07 — Police DM Sans auto-hébergée
+
+**Décidé :** la police est installée par npm (`@fontsource/dm-sans`) et servie par
+l'application elle-même.
+**Écarté :** le lien Google Fonts proposé par `design-tokens.md`.
+**Pourquoi :** même logique que le proxy, une seule origine. Google ne reçoit pas l'IP
+des visiteurs (RGPD : jugement de Munich, 2022) ; aucun domaine externe à autoriser
+dans la politique de sécurité ; police disponible même si Google est bloqué ; version
+figée par le lockfile. Le cache partagé entre sites, avantage historique de Google
+Fonts, n'existe plus depuis que les navigateurs cloisonnent leur cache (2020).
+**Conséquence assumée :** une dépendance de plus à maintenir (fichiers de police, sans
+code exécutable).
+
+---
+
+## 2026-10-07 — Scripts d'installation npm non approuvés
+
+**Décidé :** les 5 dépendances indirectes signalées par npm (`esbuild`,
+`@parcel/watcher`, `fsevents`, `lmdb`, `msgpackr-extract`) **ne sont pas autorisées** à
+exécuter leur script d'installation (`allowScripts`).
+**Écarté :** les approuver pour faire disparaître l'avertissement.
+**Pourquoi :** un script d'installation peut exécuter n'importe quelle commande sur le
+poste : c'est un vecteur classique d'attaque de la chaîne d'approvisionnement. Ces
+paquets fournissent des binaires précompilés ; l'application se construit et se teste
+sans leurs scripts.
+**Conséquence assumée :** l'avertissement reste affiché à chaque installation. À revoir
+à chaque montée de version d'Angular, et à reprendre dans `SECURITY.md`.
