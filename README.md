@@ -110,8 +110,9 @@ Pourquoi ce choix : [`docs/decisions.md`](docs/decisions.md) (2026-10-02).
 ### Tests
 
 ```bash
-npm test
+npm test                # mode surveillance : relance à chaque sauvegarde
+npm run test:coverage   # passage unique + couverture, échoue sous 70 %
 ```
 
 Tests unitaires exécutés par Vitest, dans un navigateur simulé (jsdom) : aucun
-navigateur ne s'ouvre.
+navigateur ne s'ouvre. Rapport de couverture : `coverage/index.html`.
