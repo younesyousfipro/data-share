@@ -302,3 +302,13 @@ généraliste) ; défaut « une journée » de la maquette (contredit la spec).
 on vise les exécutables et scripts, vecteurs classiques de logiciels malveillants.
 **Conséquence assumée :** une liste noire n'est jamais complète, et l'extension se
 renomme facilement ; une vraie protection passerait par un antivirus côté serveur.
+
+---
+
+## 2026-10-07 — Versions de la stack : dernières stables
+
+**Décidé :** Java **25** (LTS) · Spring Boot **4.1** (fixe Spring Security 7.1, Jackson 3.1,
+Flyway 12.4, Testcontainers 2.0, Lombok) · MapStruct 1.6.3 · JaCoCo 0.8.15 · PostgreSQL
+**18** · Angular **22** (TypeScript 6.0) · Node **24** (LTS) · Jest 30 · Cypress 16 · k6 2.
+Relevé le 2026-10-03 sur start.spring.io, Maven Central, npm et endoflife.date.
+
