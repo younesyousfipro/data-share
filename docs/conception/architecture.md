@@ -92,7 +92,7 @@ technique. C'est le back qui transforme chaque refus en réponse claire (`400`, 
 | `service/` | `AuthService`, `FileService`, `JwtService`, `FilePurgeService` | règles métier et validation serveur |
 | `repository/` | `AccountRepository`, `SharedFileRepository` | lecture et écriture en base (Spring Data JPA) |
 | `model/` | `Account`, `SharedFile` | entités JPA, le reflet des tables ; jamais renvoyées au client |
-| `dto/` | objets d'entrée et de sortie | la forme exacte des données échangées avec le front |
+| `dto/` | objets d'entrée et de sortie, suffixés `DTO` (`RegisterRequestDTO`) | la forme exacte des données échangées avec le front |
 | `mapper/` | interfaces MapStruct | convertit une entité en DTO. Ajoute des champs **calculés**, absents des tables : le statut, déduit de `expires_at` comparée à l'heure actuelle ; « protégé » (oui / non), qui fait afficher le cadenas et le champ mot de passe, déduit de `password_hash` sans jamais envoyer ce hash au front |
 | `storage/` | `FileStorage`, `LocalFileStorage` | écrit, lit et efface un fichier sur le disque, sans rien décider : ce sont les services qui choisissent quoi effacer (`FileService` pour la suppression US06, `FilePurgeService` pour la purge) |
 | `configuration/` | `SpringSecurityConfig`, `CustomUserDetailService` | routes publiques ou protégées, vérification du JWT |
@@ -121,6 +121,23 @@ flowchart LR
 | `RestExceptionHandler` | traduire une exception en code et en `ErrorDetails` | où elle a été levée |
 
 Les autres routes suivent le même chemin.
+
+#### Ordre de construction d'une route
+
+Chaque route est construite de bas en haut. Chaque pièce ne s'appuie que sur des pièces
+déjà écrites : tout compile et se vérifie à chaque étape.
+
+| # | Pièce | Traduit | Vérification |
+|---|---|---|---|
+| 1 | DTO | le contrat (`openapi.yaml`) | compilation |
+| 2 | entité + repository | le schéma (`V1__init.sql`) | démarrage : Hibernate compare l'entité à la table |
+| 3 | service | les règles métier, du DTO vers l'entité | tests unitaires |
+| 4 | `RestExceptionHandler` | les exceptions du service en codes HTTP | via la pièce 5 |
+| 5 | controller | le service, branché sur HTTP | test d'intégration, `curl` |
+
+Les pièces 1 et 2 transcrivent des décisions prises à la conception ; le service les
+relie. Le controller vient en dernier : il ne fait que brancher l'ensemble. Le front
+suit, une fois la route vérifiée.
 
 ### Front — par écran
 

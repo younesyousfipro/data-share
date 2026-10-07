@@ -48,13 +48,16 @@ le JWT (sujet = email), jamais dans un paramètre.
 
 | Champ | Règle |
 |---|---|
-| email | format valide, unique, casse ignorée (enregistré en minuscules) |
+| email | format valide, 254 caractères maximum, unique, casse ignorée (enregistré en minuscules) |
 | mot de passe du compte | 8 à 72 caractères (72 : limite de BCrypt) |
 | fichier | 1 Go maximum · extensions refusées : `exe`, `bat`, `cmd`, `com`, `msi`, `sh`, `ps1`, `vbs`, `jar` (casse ignorée, dernière extension seule) |
 | mot de passe du fichier | optionnel, 6 caractères minimum |
 | `expirationDays` | entier de 1 à 7, défaut 7 |
 
 ## Structures de données
+
+Noms des schémas OpenAPI. Côté Java, la classe porte le suffixe `DTO`
+(`RegisterRequest` → `RegisterRequestDTO`).
 
 | DTO | Champs | Utilisé par |
 |---|---|---|

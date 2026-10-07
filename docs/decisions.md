@@ -319,7 +319,9 @@ Relevé le 2026-10-03 sur start.spring.io, Maven Central, npm et endoflife.date.
 ## 2026-10-07 — Socle back généré par start.spring.io
 
 **Décidé :** projet généré par start.spring.io avec la commande ci-dessous, commité
-sans modification. On n'y met que les dépendances du socle ; les autres arrivent avec
+sans modification.
+*(Révisé le 2026-10-07 : package renommé `io.github.younesyousfipro.datashare`, voir
+« Package de base ».)* On n'y met que les dépendances du socle ; les autres arrivent avec
 le code qui les utilise (sécurité, JWT, Lombok, MapStruct à l'étape 3 ; *révisé le 2026-10-07 : MapStruct arrive avec US01/US05, US03 n'ayant rien à convertir*).
 
 ```bash
@@ -509,3 +511,32 @@ ce qui manque et sort de la navigation au clavier. Une erreur à chaque frappe s
 « email invalide » dès la première lettre.
 **Conséquence assumée :** différent de l'écran de téléchargement protégé, où la
 maquette désactive le bouton. À trancher avec US02 : harmoniser ou garder l'écart.
+
+---
+
+## 2026-10-07 — Nommage des classes back : suffixe par rôle
+
+**Décidé :** chaque classe porte le suffixe de son rôle : `RegisterRequestDTO`,
+`AuthService`, `AuthController`, `AccountRepository`, `…Mapper`. Les entités restent
+sans suffixe (`Account`, `SharedFile`), comme au P2.
+**Écarté :** DTO sans suffixe (`RegisterRequest`), comme dans `openapi.yaml`.
+**Pourquoi :** la recherche de fichier dans l'IDE trouve toute une couche en tapant
+son suffixe, et le rôle d'une classe se lit dans son nom.
+**Conséquence assumée :** le nom Java d'un DTO diffère de son schéma OpenAPI (suffixe en
+plus) ; la correspondance est notée dans `contrat-interface.md`.
+
+---
+
+## 2026-10-07 — Package de base : `io.github.younesyousfipro.datashare`
+
+**Décidé :** `groupId` `io.github.younesyousfipro`, package `io.github.younesyousfipro.datashare`,
+à la place de `com.openclassrooms`, repris du P2 à la génération du socle.
+**Écarté :** `com.openclassrooms` (laisse croire à un code fourni par OpenClassrooms,
+alors que le P3 n'a aucun code de départ) ; `com.datashare` (domaine que l'on ne
+possède pas).
+**Pourquoi :** la convention Java fait commencer le package par un domaine que l'on
+contrôle, écrit à l'envers. Le dépôt est publié sur le compte GitHub
+`younesyousfipro`, qui donne le domaine `younesyousfipro.github.io` : c'est le préfixe
+qu'accepte Maven Central pour un compte GitHub.
+**Conséquence assumée :** renommage fait avant l'entité `Account`, quand il ne touchait
+que quatre classes.
