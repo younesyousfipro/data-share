@@ -16,7 +16,7 @@ réécrire si le prototype est retenu). Le détail de chaque arbitrage est dans
 | Environnement BDD | **Docker** (Compose, lancé par Spring) | PostgreSQL installé sur le poste | une commande, même version partout |
 | Stockage fichiers | **disque local** | AWS S3, MinIO | immédiat, sans compte ni coût |
 | Authentification | **JWT** + BCrypt | sessions serveur | API sans état, exigé par le brief |
-| Tests | JUnit, Mockito, Testcontainers · Jest · Cypress · k6 | — | un outil par niveau de test |
+| Tests | JUnit, Mockito, Testcontainers · Vitest · Cypress · k6 | Jest (front) | un outil par niveau de test ; Vitest est fourni par Angular |
 
 ---
 
@@ -85,9 +85,9 @@ réécrire si le prototype est retenu). Le détail de chaque arbitrage est dans
 |---|---|---|
 | Unitaire back | JUnit + Mockito | la logique des services, isolée de la base |
 | Intégration back | Testcontainers | l'API sur un vrai PostgreSQL, migré par Flyway |
-| Unitaire front | Jest | composants et services Angular |
+| Unitaire front | Vitest | composants et services Angular |
 | Bout en bout | Cypress | les parcours critiques dans un navigateur |
 | Charge | k6 | le temps de réponse d'un endpoint critique |
 
 **En production** : ces tests tournent dans le pipeline CI à chaque commit ;
-couverture mesurée par JaCoCo (back) et Jest (front), seuil fixé à 70 %.
+couverture mesurée par JaCoCo (back) et Vitest (front), seuil fixé à 70 %.

@@ -1,0 +1,69 @@
+@import '@fontsource/dm-sans/400.css';
+@import '@fontsource/dm-sans/700.css';
+
+/* Values extracted from the Figma mockups */
+:root {
+  /* Brand */
+  --color-orange: #E27F29;           /* links, button text */
+  --color-orange-dark: #BA681F;      /* button text on light background */
+  --color-orange-border: #FFA569;    /* secondary button border */
+
+  /* Neutrals */
+  --color-black: #1E1E1E;            /* main text */
+  --color-black-button: #2C2C2C;     /* dark button background */
+  --color-cream: #F3EEEA;            /* text on dark background */
+  --color-grey-border: #D9D9D9;      /* field border */
+  --color-grey-placeholder: #B3B3B3;
+  --color-grey-text: #757575;        /* secondary text */
+  --color-white: #FFFFFF;
+
+  --gradient-page: linear-gradient(173deg, #FFB88C 0%, #DE6262 100%);
+
+  /* Callouts */
+  --color-info-bg: #E2ECFF;
+  --color-info-border: #B1C9F5;
+  --color-info-text: #2A3F72;
+  --color-warning-bg: #FFF5ED;
+  --color-warning-border: #E6CBB5;
+  --color-warning-text: #AA642B;
+  --color-error-bg: #FFE2E2;
+  --color-error-border: #E8A6A6;
+  --color-error-text: #9C3333;
+
+  /* "My files" screen, the only one without the gradient */
+  --color-files-bg: #FFF7F7;
+  --color-files-banner: #FFEEE3;
+  --color-files-row: rgba(255, 193, 145, .05);
+  --color-files-border: rgba(215, 99, 11, .20);
+  --color-status-expired: #C62020;   /* not the callout red */
+
+  /* Typography */
+  --font-family: 'DM Sans', sans-serif;
+  --font-size-logo: 32px;
+  --font-size-title: 28px;
+  --font-size-body: 16px;
+  --font-size-small: 14px;           /* callouts, error messages */
+
+  /* 8px scale, 12px as half step */
+  --space-1: 8px;
+  --space-1-5: 12px;
+  --space-2: 16px;
+  --space-3: 24px;
+
+  --radius-field: 8px;
+  --radius-card: 16px;
+  --radius-pill: 24px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  color: var(--color-black);
+}

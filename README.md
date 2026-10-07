@@ -15,6 +15,7 @@ dépose un fichier et obtient un lien de téléchargement à partager, valable 7
 |---|---|---|
 | Java (JDK) | 25 | compile et exécute le back |
 | Docker | Docker Desktop lancé | fait tourner PostgreSQL, en dev comme dans les tests |
+| Node.js | 24 | compile et sert le front (npm est fourni avec) |
 
 Maven n'est pas à installer : le projet fournit `./mvnw`, qui télécharge la bonne
 version au premier lancement.
@@ -67,4 +68,51 @@ Le port 5432 doit être libre sur le poste.
 
 ## Front
 
-...
+### Installation (une seule fois)
+
+```bash
+cd front
+npm ci
+```
+
+`npm ci` installe exactement les versions figées dans `package-lock.json`.
+
+Angular CLI n'est pas à installer globalement : il est fourni par le projet. Pour une
+commande hors scripts, passer par `npx ng …` (ex. `npx ng generate component …`).
+
+### Lancement
+
+```bash
+npm start
+```
+
+L'application est servie sur http://localhost:4200 et se recharge à chaque sauvegarde.
+
+**Le back doit tourner** pour que les écrans fonctionnent : les appels à l'API passent
+par le proxy de dev (ci-dessous).
+
+### Appels à l'API : le proxy de dev
+
+```
+navigateur ──► localhost:4200/api/... ──(proxy)──► localhost:8080/api/...
+```
+
+- Dans le code, les appels à l'API utilisent une **URL relative** : `/api/auth/login`,
+  jamais `http://localhost:8080/...`. Un appel direct au port 8080 est bloqué par le
+  navigateur (origine différente, CORS volontairement non configuré).
+- Le proxy relaie tout ce qui commence par `/api` vers l'API (`proxy.conf.json`) ; il
+  est chargé automatiquement par `npm start`.
+- Il n'existe qu'en dev. En production, un reverse proxy joue le même rôle : front et
+  API sous un même domaine. Le code ne change pas.
+
+Pourquoi ce choix : [`docs/decisions.md`](docs/decisions.md) (2026-10-02).
+
+### Tests
+
+```bash
+npm test                # mode surveillance : relance à chaque sauvegarde
+npm run test:coverage   # passage unique + couverture, échoue sous 70 %
+```
+
+Tests unitaires exécutés par Vitest, dans un navigateur simulé (jsdom) : aucun
+navigateur ne s'ouvre. Rapport de couverture : `coverage/index.html`.
