@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: 'postgres:18'
+    environment:
+      - 'POSTGRES_DB=${DB_NAME}'
+      - 'POSTGRES_USER=${DB_USER}'
+      - 'POSTGRES_PASSWORD=${DB_PASSWORD}'
+    ports:
+      - '5432:5432'
+    volumes:
+      # Since postgres 18 the image expects the volume on the parent folder, not on .../data
+      - 'postgres-data:/var/lib/postgresql'
+
+volumes:
+  postgres-data:

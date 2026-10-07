@@ -312,3 +312,46 @@ Flyway 12.4, Testcontainers 2.0, Lombok) · MapStruct 1.6.3 · JaCoCo 0.8.15 · 
 **18** · Angular **22** (TypeScript 6.0) · Node **24** (LTS) · Jest 30 · Cypress 16 · k6 2.
 Relevé le 2026-10-03 sur start.spring.io, Maven Central, npm et endoflife.date.
 
+---
+
+## 2026-10-07 — Socle back généré par start.spring.io
+
+**Décidé :** projet généré par start.spring.io avec la commande ci-dessous, commité
+sans modification. On n'y met que les dépendances du socle ; les autres arrivent avec
+le code qui les utilise (sécurité, JWT, Lombok, MapStruct à l'étape 3).
+
+```bash
+curl https://start.spring.io/starter.zip -o back.zip \
+  -d type=maven-project -d language=java -d bootVersion=4.1.1 -d javaVersion=25 \
+  -d groupId=com.openclassrooms -d artifactId=datashare -d name=datashare \
+  -d description="DataShare API" -d packageName=com.openclassrooms.datashare -d packaging=jar \
+  -d dependencies=web,data-jpa,validation,flyway,postgresql,docker-compose,actuator,testcontainers
+```
+
+**Écarté :** reprendre le `pom.xml` du P2 ; l'assistant d'IntelliJ ; toutes les
+dépendances dès le départ.
+**Pourquoi :** Spring Boot 4 a changé le nom de plusieurs dépendances : le pom du P2
+serait faux. La commande garde la trace des options choisies, l'assistant non. Une
+dépendance arrive avec son usage, ce qui la justifie dans l'historique.
+**Conséquence assumée :** le `pom.xml` évolue à chaque étape.
+
+---
+
+## 2026-10-07 — Maven Wrapper (`mvnw`)
+
+**Décidé :** le projet se construit avec `./mvnw` (`mvnw.cmd` sous Windows), qui
+télécharge et utilise une version précise de Maven.
+**Écarté :** le Maven installé sur le poste.
+**Pourquoi :** tout le monde construit avec le même Maven, sans l'installer. Seuls Java
+et Docker sont requis.
+
+---
+
+## 2026-10-07 — Base de dev : Docker Compose seul, PostgreSQL 18
+
+**Décidé :** en dev, la base est lancée par `compose.yaml` uniquement, en version
+`postgres:18` (la même dans les tests). Les identifiants sont dans un `.env` non versionné.
+**Écarté :** `postgres:latest`, qui change sans prévenir ; le second lanceur généré par
+start.spring.io (`TestDatashareApplication`), qui démarre une base jetable.
+**Pourquoi :** une seule façon de lancer l'application, avec des données conservées.
+**Conséquence assumée :** copier `.env.example` en `.env` avant le premier lancement.
