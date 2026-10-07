@@ -27,6 +27,14 @@ réécrire si le prototype est retenu). Le détail de chaque arbitrage est dans
   Aucune bibliothèque tierce à assembler.
 - **Structure imposée et lisible** : Controller → Service → Repository, DTO en
   entrée et en sortie.
+- **Lombok, outil de compilation seulement** : il écrit getters et setters
+  pendant la compilation, puis s'efface.
+  - **à la livraison** : déclaré `optional`, il est absent du JAR ;
+  - **dans la couverture** : son code est marqué `@Generated` (`lombok.config`) et
+    JaCoCo l'ignore. Seul le code écrit à la main est mesuré ; au P2, sans ce
+    réglage, le code généré plafonnait la couverture vers 41 % ;
+  - **à la compilation** : depuis Java 23, il doit être déclaré comme processeur
+    d'annotations (`pom.xml`), sinon ses annotations sont ignorées.
 - **En production** : un JAR dans une image Docker, configuration par variables
   d'environnement, sondes de santé fournies par Spring Boot Actuator.
 
@@ -49,7 +57,8 @@ réécrire si le prototype est retenu). Le détail de chaque arbitrage est dans
   `V2__…`), appliqués automatiquement au démarrage. Le même schéma sert en
   développement et dans les tests.
 - **En production** : base managée (AWS RDS, Azure Database for PostgreSQL) ;
-  Flyway applique les migrations au déploiement, sans intervention manuelle.
+  les migrations deviennent une étape du déploiement, séparée du démarrage de
+  l'application (voir `../perspectives.md`).
 
 ## Docker — la base en conteneur
 
