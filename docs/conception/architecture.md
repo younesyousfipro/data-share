@@ -68,6 +68,20 @@ Pourquoi pas une configuration CORS dans Spring :
 Les deux se complètent : le proxy ne remplace aucun contrôle de l'application, qui
 reste seule à protéger l'API contre un appel direct (`curl`, Postman).
 
+## Validation en trois niveaux
+
+Chaque règle (spécifications, [contrat d'interface](contrat-interface.md)) est
+contrôlée à plusieurs niveaux, chacun pour une raison différente.
+
+| Niveau | Rôle | Exemples |
+|---|---|---|
+| Front (formulaire) | **confort** : erreur immédiate, sans appel réseau | format de l'email, 8 caractères minimum, mots de passe identiques · taille ≤ 1 Go, extension autorisée |
+| Back (`@Valid` sur le DTO, services) | **sécurité** : seule barrière fiable, l'API pouvant être appelée sans le front | mêmes règles, sauf la confirmation du mot de passe (propre au formulaire) |
+| Base (contraintes SQL) | **garantie finale**, même en cas d'accès concurrent ou d'erreur de code | email unique · champs obligatoires · `expires_at > uploaded_at` |
+
+Le niveau front est contournable (`curl`) ; le niveau base ne donne qu'une erreur
+technique. C'est le back qui transforme chaque refus en réponse claire (`400`, `409`).
+
 ## Découpage interne
 
 ### Back — par couche
@@ -86,6 +100,27 @@ reste seule à protéger l'API contre un appel direct (`curl`, Postman).
 
 Un controller ne parle qu'à un service. Un service parle aux repositories et à
 `FileStorage`, sans savoir où les octets sont rangés.
+
+#### Parcours d'une requête : l'inscription (US03)
+
+```mermaid
+flowchart LR
+  P["Page d'inscription<br/>(formulaire)"] --> FS["AuthService<br/>(front)"]
+  FS -- "POST /api/auth/register" --> C["AuthController"]
+  C --> S["AuthService"]
+  S --> R["AccountRepository"] --> T[("table account")]
+  S --> E["PasswordEncoder<br/>(BCrypt)"]
+  S -. "exception" .-> H["RestExceptionHandler<br/>→ ErrorDetails"]
+```
+
+| Couche | Sait | Ignore |
+|---|---|---|
+| `AuthController` | HTTP : route, corps JSON, code `201` | les règles métier, la base |
+| `AuthService` | les règles : email libre, mot de passe haché | HTTP, le SQL |
+| `AccountRepository` | lire et écrire la table `account` | pourquoi on lui demande |
+| `RestExceptionHandler` | traduire une exception en code et en `ErrorDetails` | où elle a été levée |
+
+Les autres routes suivent le même chemin.
 
 ### Front — par écran
 

@@ -273,10 +273,13 @@ components:
         email:
           type: string
           format: email
+          description: Trimmed and stored lower-case, so it is unique regardless of case.
           example: marie@mail.fr
         password:
           type: string
           minLength: 8
+          maxLength: 72
+          description: Max 72, the input limit of BCrypt.
           example: s3cretPass
 
     LoginRequest:
@@ -286,6 +289,7 @@ components:
         email:
           type: string
           format: email
+          description: Case-insensitive, compared lower-case.
           example: marie@mail.fr
         password:
           type: string

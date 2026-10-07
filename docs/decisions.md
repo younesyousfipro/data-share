@@ -320,7 +320,7 @@ Relevé le 2026-10-03 sur start.spring.io, Maven Central, npm et endoflife.date.
 
 **Décidé :** projet généré par start.spring.io avec la commande ci-dessous, commité
 sans modification. On n'y met que les dépendances du socle ; les autres arrivent avec
-le code qui les utilise (sécurité, JWT, Lombok, MapStruct à l'étape 3).
+le code qui les utilise (sécurité, JWT, Lombok, MapStruct à l'étape 3 ; *révisé le 2026-10-07 : MapStruct arrive avec US01/US05, US03 n'ayant rien à convertir*).
 
 ```bash
 curl https://start.spring.io/starter.zip -o back.zip \
@@ -448,3 +448,64 @@ paquets fournissent des binaires précompilés ; l'application se construit et s
 sans leurs scripts.
 **Conséquence assumée :** l'avertissement reste affiché à chaque installation. À revoir
 à chaque montée de version d'Angular, et à reprendre dans `SECURITY.md`.
+
+---
+
+## 2026-10-07 — Email du compte enregistré en minuscules
+
+**Décidé :** l'email est débarrassé de ses espaces et mis en minuscules avant tout
+enregistrement et toute comparaison (inscription, connexion).
+**Écarté :** l'enregistrer tel quel ; porter la règle en base (index unique sur
+`lower(email)` ou type `citext`).
+**Pourquoi :** l'unicité de PostgreSQL tient compte de la casse : `Marie@mail.fr` et
+`marie@mail.fr` donneraient deux comptes, et une majuscule tapée par erreur
+empêcherait de se connecter. La norme (RFC 5321) autorise une partie locale sensible à
+la casse, mais aucun fournisseur courant ne l'applique. La règle en base demanderait
+une migration de plus pour un cas que le service couvre.
+**Conséquence assumée :** la règle n'existe que dans le code ; une insertion faite hors
+de l'API (SQL à la main) peut la contourner.
+
+---
+
+## 2026-10-07 — Mot de passe du compte : 8 à 72 caractères
+
+**Décidé :** longueur de 8 à 72 caractères, contrôlée côté client et serveur.
+**Écarté :** aucune limite haute ; pré-hacher le mot de passe (SHA-256) avant BCrypt.
+**Pourquoi :** BCrypt ne lit que les 72 premiers octets, et Spring Security refuse
+désormais un mot de passe plus long par une exception : sans limite, la réponse serait
+une erreur `500` au lieu d'un `400`. 72 caractères suffisent à une phrase de passe ;
+le pré-hachage contournerait la limite au prix d'un montage non standard.
+**Conséquence assumée :** 72 caractères ne font pas toujours 72 octets (un `é` en
+occupe 2). Ce cas marginal doit aussi répondre `400`, à vérifier dans le gestionnaire
+d'erreurs.
+
+---
+
+## 2026-10-07 — Confirmation du mot de passe : front seulement
+
+**Décidé :** le champ « Vérification du mot de passe » de la maquette est contrôlé par
+le formulaire et n'est **pas envoyé** à l'API (`RegisterRequest` = email, mot de passe).
+**Écarté :** l'envoyer et le comparer côté serveur.
+**Pourquoi :** il protège l'utilisateur d'une faute de frappe, ce n'est pas une règle
+de sécurité. Un client qui appelle l'API directement choisit son mot de passe en
+connaissance de cause.
+
+---
+
+## 2026-10-07 — Erreurs de formulaire, absentes des maquettes
+
+**Décidé :**
+- erreur renvoyée par le serveur (email déjà pris, identifiants refusés) : callout
+  rouge du design system, annoncé aux lecteurs d'écran (`role="alert"`)
+- erreur de champ : texte rouge en 14 px sous le champ, relié à celui-ci
+  (`aria-describedby`), affiché quand on quitte le champ ou à l'envoi
+- bouton d'envoi **toujours actif**
+
+**Écarté :** bouton désactivé tant que le formulaire est invalide ; erreur affichée à
+chaque frappe.
+**Pourquoi :** comble l'écart n° 5 relevé dans les maquettes (aucun état d'erreur
+d'authentification), avec les composants existants. Un bouton désactivé n'explique pas
+ce qui manque et sort de la navigation au clavier. Une erreur à chaque frappe signale
+« email invalide » dès la première lettre.
+**Conséquence assumée :** différent de l'écran de téléchargement protégé, où la
+maquette désactive le bouton. À trancher avec US02 : harmoniser ou garder l'écart.
