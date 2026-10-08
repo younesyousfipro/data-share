@@ -13,7 +13,7 @@ Stratégie de test de DataShare, tenue à jour à chaque user story.
 | Performance | k6 | temps de réponse d'un endpoint critique sous charge | voir `PERF.md` |
 
 **Convention back** : un service est testé en **unitaire** (ses règles, isolées) ; un
-controller en **intégration** (la chaîne complète). Un controller ne fait que relier
+controller en **intégration** (la chaîne complète). Un controller ne fait que relier HTTP au service.
 
 ## Fonctionnalités critiques
 
