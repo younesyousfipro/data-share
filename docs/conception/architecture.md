@@ -126,7 +126,7 @@ technique. C'est le back qui transforme chaque refus en réponse claire (`400`, 
 | `mapper/` | interfaces MapStruct | convertit une entité en DTO. Ajoute des champs **calculés**, absents des tables : le statut, déduit de `expires_at` comparée à l'heure actuelle ; « protégé » (oui / non), qui fait afficher le cadenas et le champ mot de passe, déduit de `password_hash` sans jamais envoyer ce hash au front |
 | `storage/` | `FileStorage`, `LocalFileStorage` | écrit, lit et efface un fichier sur le disque, sans rien décider : ce sont les services qui choisissent quoi effacer (`FileService` pour la suppression US06, `FilePurgeService` pour la purge) |
 | `configuration/` | `SpringSecurityConfig`, `CustomUserDetailService` | routes publiques ou protégées, vérification du JWT |
-| `exception/` | `RestExceptionHandler`, `ErrorDetails` | transforme toute erreur en une réponse au même format |
+| `exception/` | `RestExceptionHandler`, exceptions métier (`EmailAlreadyUsedException`…) | transforme toute erreur en une réponse au même format (`ErrorDetailsDTO`) |
 
 Un controller ne parle qu'à un service. Un service parle aux repositories et à
 `FileStorage`, sans savoir où les octets sont rangés.
@@ -140,7 +140,7 @@ flowchart LR
   C --> S["AuthService"]
   S --> R["AccountRepository"] --> T[("table account")]
   S --> E["PasswordEncoder<br/>(BCrypt)"]
-  S -. "exception" .-> H["RestExceptionHandler<br/>→ ErrorDetails"]
+  S -. "exception" .-> H["RestExceptionHandler<br/>→ ErrorDetailsDTO"]
 ```
 
 | Couche | Sait | Ignore |
@@ -148,7 +148,7 @@ flowchart LR
 | `AuthController` | HTTP : route, corps JSON, code `201` | les règles métier, la base |
 | `AuthService` | les règles : email libre, mot de passe haché | HTTP, le SQL |
 | `AccountRepository` | lire et écrire la table `account` | pourquoi on lui demande |
-| `RestExceptionHandler` | traduire une exception en code et en `ErrorDetails` | où elle a été levée |
+| `RestExceptionHandler` | traduire une exception en code et en `ErrorDetailsDTO` | où elle a été levée |
 
 Les autres routes suivent le même chemin.
 

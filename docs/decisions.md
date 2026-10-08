@@ -542,3 +542,21 @@ contrôle, écrit à l'envers. Le dépôt est publié sur le compte GitHub
 qu'accepte Maven Central pour un compte GitHub.
 **Conséquence assumée :** renommage fait avant l'entité `Account`, quand il ne touchait
 que quatre classes.
+
+---
+
+## 2026-10-08 — Gestionnaire d'erreurs : hériter de `ResponseEntityExceptionHandler`
+
+**Décidé :** `RestExceptionHandler` hérite de `ResponseEntityExceptionHandler` et
+surcharge `handleExceptionInternal` pour rendre **toutes** les erreurs au format
+`ErrorDetailsDTO`. Les erreurs de validation listent les champs refusés, **jamais la
+valeur saisie**.
+**Écarté :** une classe autonome, sans héritage (prévu au plan d'US03) ; garder le
+format `ProblemDetail` de Spring pour ses propres erreurs.
+**Pourquoi :** sans héritage, les erreurs techniques de Spring (JSON mal formé, méthode
+non supportée, route inconnue) tombent dans le cas général et deviennent des `500`.
+Spring connaît déjà le bon code de chacune ; on ne change que la forme du corps. Un
+seul format évite au front deux cas à traiter. La valeur refusée peut être un mot de
+passe : ni réponse ni log ne la contiennent.
+**Conséquence assumée :** dépend des méthodes à surcharger de Spring ; à vérifier à
+chaque montée de version majeure (`MAINTENANCE.md`).

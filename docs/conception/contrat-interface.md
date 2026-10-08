@@ -32,6 +32,11 @@ le JWT (sujet = email), jamais dans un paramètre.
 }
 ```
 
+Y compris pour les erreurs techniques de Spring (JSON mal formé, route inconnue), qui
+gardent leur code mais prennent ce format. Le front lit donc toujours `message`, sans
+se demander d'où vient l'erreur. Les erreurs de validation citent les champs refusés,
+jamais la valeur saisie.
+
 **Codes de retour**
 
 | Code | Quand |
