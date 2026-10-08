@@ -482,6 +482,21 @@ le pré-hachage contournerait la limite au prix d'un montage non standard.
 **Conséquence assumée :** 72 caractères ne font pas toujours 72 octets (un `é` en
 occupe 2). Ce cas marginal doit aussi répondre `400`, à vérifier dans le gestionnaire
 d'erreurs.
+*(Corrigé le 2026-10-08 : un test d'intégration a montré une réponse `500` pour 40 « é »
+— 40 caractères, mais 80 octets. La limite haute devient **18 caractères** (`@Size`) :
+même à 4 octets par caractère, 18 × 4 = 72. Même règle pour le mot de passe des
+fichiers (US01), lui aussi haché par BCrypt ; client et serveur appliquent exactement
+la même règle.
+Écartés : une annotation de validation sur mesure comptant les octets (`@MaxBytes`,
+garde 72 caractères ASCII, mais ajoute une mécanique que l'on préfère ne pas
+introduire dans le prototype) ; une méthode `@AssertTrue` dans le DTO (à recopier pour
+US01) ; traduire toute `IllegalArgumentException` en `400` (masquerait des erreurs de
+programmation) ; intercepter l'erreur dans le service (lui ferait connaître une limite
+propre à BCrypt).
+**Écart assumé avec les bonnes pratiques :** l'OWASP et le NIST (SP 800-63B)
+recommandent d'accepter au moins 64 caractères, la longueur faisant la robustesse d'un
+mot de passe. 18 respecte la spec (minimum seul) ; relever la limite figure dans
+`perspectives.md`.)*
 
 ---
 

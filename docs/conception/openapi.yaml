@@ -279,8 +279,8 @@ components:
         password:
           type: string
           minLength: 8
-          maxLength: 72
-          description: Max 72, the input limit of BCrypt.
+          maxLength: 18
+          description: Max 18, so that even at 4 bytes per character it stays within the 72-byte input limit of BCrypt.
           example: s3cretPass
 
     LoginRequest:

@@ -54,7 +54,7 @@ jamais la valeur saisie.
 | Champ | Règle |
 |---|---|
 | email | format valide, 254 caractères maximum, unique, casse ignorée (enregistré en minuscules) |
-| mot de passe du compte | 8 à 72 caractères (72 : limite de BCrypt) |
+| mot de passe du compte | 8 à 18 caractères (18 × 4 octets au pire = 72, la limite de BCrypt) |
 | fichier | 1 Go maximum · extensions refusées : `exe`, `bat`, `cmd`, `com`, `msi`, `sh`, `ps1`, `vbs`, `jar` (casse ignorée, dernière extension seule) |
 | mot de passe du fichier | optionnel, 6 caractères minimum |
 | `expirationDays` | entier de 1 à 7, défaut 7 |
