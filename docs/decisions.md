@@ -455,8 +455,10 @@ sans leurs scripts.
 
 ## 2026-10-07 — Email du compte enregistré en minuscules
 
-**Décidé :** l'email est débarrassé de ses espaces et mis en minuscules avant tout
-enregistrement et toute comparaison (inscription, connexion).
+**Décidé :** l'email est mis en minuscules avant tout enregistrement et toute
+comparaison (inscription, connexion).
+*(Corrigé le 2026-10-08 : le service ne retire pas les espaces. `@Email` refuse déjà un
+email entouré d'espaces (`400`) ; c'est le front qui les retire à la saisie.)*
 **Écarté :** l'enregistrer tel quel ; porter la règle en base (index unique sur
 `lower(email)` ou type `citext`).
 **Pourquoi :** l'unicité de PostgreSQL tient compte de la casse : `Marie@mail.fr` et

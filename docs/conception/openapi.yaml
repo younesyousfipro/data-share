@@ -274,7 +274,7 @@ components:
           type: string
           format: email
           maxLength: 254
-          description: Trimmed and stored lower-case, so it is unique regardless of case.
+          description: Stored lower-case, so it is unique regardless of case.
           example: marie@mail.fr
         password:
           type: string
