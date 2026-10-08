@@ -12,6 +12,9 @@ Stratégie de test de DataShare, tenue à jour à chaque user story.
 | E2E | Cypress | un parcours utilisateur complet dans le navigateur | à préciser avec les scénarios |
 | Performance | k6 | temps de réponse d'un endpoint critique sous charge | voir `PERF.md` |
 
+**Convention back** : un service est testé en **unitaire** (ses règles, isolées) ; un
+controller en **intégration** (la chaîne complète). Un controller ne fait que relier
+
 ## Fonctionnalités critiques
 
 Identifiées avant le développement : ce sont elles que les tests doivent couvrir en
