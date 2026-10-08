@@ -68,6 +68,27 @@ Pourquoi pas une configuration CORS dans Spring :
 Les deux se complètent : le proxy ne remplace aucun contrôle de l'application, qui
 reste seule à protéger l'API contre un appel direct (`curl`, Postman).
 
+### Configuration de Spring Security
+
+`SpringSecurityConfig` remplace le comportement par défaut de Spring Security, qui
+verrouille toutes les routes derrière un formulaire de connexion.
+
+| Réglage | Raison |
+|---|---|
+| `PasswordEncoder` = BCrypt | Le service ne connaît que l'interface : changer d'algorithme ne touche que la configuration. BCrypt **sale** chaque hash (sel aléatoire stocké dans le hash, `$2a$10$<sel><empreinte>`) : deux mots de passe identiques donnent deux hash différents. |
+| CSRF désactivé | Une attaque CSRF exploite les cookies que le navigateur envoie seul. Le JWT voyage dans un en-tête ajouté par le code du front : rien d'automatique à exploiter. |
+| `STATELESS` | Aucune session côté serveur ; chaque requête apporte sa preuve (le JWT). |
+| `/api/auth/**`, `/api/download/**` publics, le reste authentifié | Une règle par niveau d'accès (décision du 2026-10-03). |
+
+**En-têtes ajoutés par défaut** à chaque réponse, conservés tels quels :
+
+| En-tête | Protège contre |
+|---|---|
+| `X-Content-Type-Options: nosniff` | le navigateur qui « devine » le type d'un contenu : un fichier déposé servi comme texte ne peut pas être exécuté comme HTML ou JavaScript. Utile pour le téléchargement (US02). |
+| `X-Frame-Options: DENY` | l'affichage de l'appli dans une `iframe` d'un autre site (*clickjacking* : faire cliquer l'utilisateur à son insu) |
+| `Cache-Control: no-cache, no-store…` | la conservation de réponses sensibles dans le cache du navigateur ou d'un proxy |
+| `Strict-Transport-Security` | le retour en HTTP non chiffré ; envoyé seulement en HTTPS, donc absent en dev |
+
 ## Validation en trois niveaux
 
 Chaque règle (spécifications, [contrat d'interface](contrat-interface.md)) est
