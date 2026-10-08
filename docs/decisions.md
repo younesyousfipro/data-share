@@ -319,7 +319,9 @@ Relevé le 2026-10-03 sur start.spring.io, Maven Central, npm et endoflife.date.
 ## 2026-10-07 — Socle back généré par start.spring.io
 
 **Décidé :** projet généré par start.spring.io avec la commande ci-dessous, commité
-sans modification. On n'y met que les dépendances du socle ; les autres arrivent avec
+sans modification.
+*(Révisé le 2026-10-07 : package renommé `io.github.younesyousfipro.datashare`, voir
+« Package de base ».)* On n'y met que les dépendances du socle ; les autres arrivent avec
 le code qui les utilise (sécurité, JWT, Lombok, MapStruct à l'étape 3 ; *révisé le 2026-10-07 : MapStruct arrive avec US01/US05, US03 n'ayant rien à convertir*).
 
 ```bash
@@ -453,8 +455,10 @@ sans leurs scripts.
 
 ## 2026-10-07 — Email du compte enregistré en minuscules
 
-**Décidé :** l'email est débarrassé de ses espaces et mis en minuscules avant tout
-enregistrement et toute comparaison (inscription, connexion).
+**Décidé :** l'email est mis en minuscules avant tout enregistrement et toute
+comparaison (inscription, connexion).
+*(Corrigé le 2026-10-08 : le service ne retire pas les espaces. `@Email` refuse déjà un
+email entouré d'espaces (`400`) ; c'est le front qui les retire à la saisie.)*
 **Écarté :** l'enregistrer tel quel ; porter la règle en base (index unique sur
 `lower(email)` ou type `citext`).
 **Pourquoi :** l'unicité de PostgreSQL tient compte de la casse : `Marie@mail.fr` et
@@ -478,6 +482,21 @@ le pré-hachage contournerait la limite au prix d'un montage non standard.
 **Conséquence assumée :** 72 caractères ne font pas toujours 72 octets (un `é` en
 occupe 2). Ce cas marginal doit aussi répondre `400`, à vérifier dans le gestionnaire
 d'erreurs.
+*(Corrigé le 2026-10-08 : un test d'intégration a montré une réponse `500` pour 40 « é »
+— 40 caractères, mais 80 octets. La limite haute devient **18 caractères** (`@Size`) :
+même à 4 octets par caractère, 18 × 4 = 72. Même règle pour le mot de passe des
+fichiers (US01), lui aussi haché par BCrypt ; client et serveur appliquent exactement
+la même règle.
+Écartés : une annotation de validation sur mesure comptant les octets (`@MaxBytes`,
+garde 72 caractères ASCII, mais ajoute une mécanique que l'on préfère ne pas
+introduire dans le prototype) ; une méthode `@AssertTrue` dans le DTO (à recopier pour
+US01) ; traduire toute `IllegalArgumentException` en `400` (masquerait des erreurs de
+programmation) ; intercepter l'erreur dans le service (lui ferait connaître une limite
+propre à BCrypt).
+**Écart assumé avec les bonnes pratiques :** l'OWASP et le NIST (SP 800-63B)
+recommandent d'accepter au moins 64 caractères, la longueur faisant la robustesse d'un
+mot de passe. 18 respecte la spec (minimum seul) ; relever la limite figure dans
+`perspectives.md`.)*
 
 ---
 
@@ -509,3 +528,50 @@ ce qui manque et sort de la navigation au clavier. Une erreur à chaque frappe s
 « email invalide » dès la première lettre.
 **Conséquence assumée :** différent de l'écran de téléchargement protégé, où la
 maquette désactive le bouton. À trancher avec US02 : harmoniser ou garder l'écart.
+
+---
+
+## 2026-10-07 — Nommage des classes back : suffixe par rôle
+
+**Décidé :** chaque classe porte le suffixe de son rôle : `RegisterRequestDTO`,
+`AuthService`, `AuthController`, `AccountRepository`, `…Mapper`. Les entités restent
+sans suffixe (`Account`, `SharedFile`), comme au P2.
+**Écarté :** DTO sans suffixe (`RegisterRequest`), comme dans `openapi.yaml`.
+**Pourquoi :** la recherche de fichier dans l'IDE trouve toute une couche en tapant
+son suffixe, et le rôle d'une classe se lit dans son nom.
+**Conséquence assumée :** le nom Java d'un DTO diffère de son schéma OpenAPI (suffixe en
+plus) ; la correspondance est notée dans `contrat-interface.md`.
+
+---
+
+## 2026-10-07 — Package de base : `io.github.younesyousfipro.datashare`
+
+**Décidé :** `groupId` `io.github.younesyousfipro`, package `io.github.younesyousfipro.datashare`,
+à la place de `com.openclassrooms`, repris du P2 à la génération du socle.
+**Écarté :** `com.openclassrooms` (laisse croire à un code fourni par OpenClassrooms,
+alors que le P3 n'a aucun code de départ) ; `com.datashare` (domaine que l'on ne
+possède pas).
+**Pourquoi :** la convention Java fait commencer le package par un domaine que l'on
+contrôle, écrit à l'envers. Le dépôt est publié sur le compte GitHub
+`younesyousfipro`, qui donne le domaine `younesyousfipro.github.io` : c'est le préfixe
+qu'accepte Maven Central pour un compte GitHub.
+**Conséquence assumée :** renommage fait avant l'entité `Account`, quand il ne touchait
+que quatre classes.
+
+---
+
+## 2026-10-08 — Gestionnaire d'erreurs : hériter de `ResponseEntityExceptionHandler`
+
+**Décidé :** `RestExceptionHandler` hérite de `ResponseEntityExceptionHandler` et
+surcharge `handleExceptionInternal` pour rendre **toutes** les erreurs au format
+`ErrorDetailsDTO`. Les erreurs de validation listent les champs refusés, **jamais la
+valeur saisie**.
+**Écarté :** une classe autonome, sans héritage (prévu au plan d'US03) ; garder le
+format `ProblemDetail` de Spring pour ses propres erreurs.
+**Pourquoi :** sans héritage, les erreurs techniques de Spring (JSON mal formé, méthode
+non supportée, route inconnue) tombent dans le cas général et deviennent des `500`.
+Spring connaît déjà le bon code de chacune ; on ne change que la forme du corps. Un
+seul format évite au front deux cas à traiter. La valeur refusée peut être un mot de
+passe : ni réponse ni log ne la contiennent.
+**Conséquence assumée :** dépend des méthodes à surcharger de Spring ; à vérifier à
+chaque montée de version majeure (`MAINTENANCE.md`).

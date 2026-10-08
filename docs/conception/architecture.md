@@ -68,6 +68,27 @@ Pourquoi pas une configuration CORS dans Spring :
 Les deux se complètent : le proxy ne remplace aucun contrôle de l'application, qui
 reste seule à protéger l'API contre un appel direct (`curl`, Postman).
 
+### Configuration de Spring Security
+
+`SpringSecurityConfig` remplace le comportement par défaut de Spring Security, qui
+verrouille toutes les routes derrière un formulaire de connexion.
+
+| Réglage | Raison |
+|---|---|
+| `PasswordEncoder` = BCrypt | Le service ne connaît que l'interface : changer d'algorithme ne touche que la configuration. BCrypt **sale** chaque hash (sel aléatoire stocké dans le hash, `$2a$10$<sel><empreinte>`) : deux mots de passe identiques donnent deux hash différents. |
+| CSRF désactivé | Une attaque CSRF exploite les cookies que le navigateur envoie seul. Le JWT voyage dans un en-tête ajouté par le code du front : rien d'automatique à exploiter. |
+| `STATELESS` | Aucune session côté serveur ; chaque requête apporte sa preuve (le JWT). |
+| `/api/auth/**`, `/api/download/**` publics, le reste authentifié | Une règle par niveau d'accès (décision du 2026-10-03). |
+
+**En-têtes ajoutés par défaut** à chaque réponse, conservés tels quels :
+
+| En-tête | Protège contre |
+|---|---|
+| `X-Content-Type-Options: nosniff` | le navigateur qui « devine » le type d'un contenu : un fichier déposé servi comme texte ne peut pas être exécuté comme HTML ou JavaScript. Utile pour le téléchargement (US02). |
+| `X-Frame-Options: DENY` | l'affichage de l'appli dans une `iframe` d'un autre site (*clickjacking* : faire cliquer l'utilisateur à son insu) |
+| `Cache-Control: no-cache, no-store…` | la conservation de réponses sensibles dans le cache du navigateur ou d'un proxy |
+| `Strict-Transport-Security` | le retour en HTTP non chiffré ; envoyé seulement en HTTPS, donc absent en dev |
+
 ## Validation en trois niveaux
 
 Chaque règle (spécifications, [contrat d'interface](contrat-interface.md)) est
@@ -82,6 +103,15 @@ contrôlée à plusieurs niveaux, chacun pour une raison différente.
 Le niveau front est contournable (`curl`) ; le niveau base ne donne qu'une erreur
 technique. C'est le back qui transforme chaque refus en réponse claire (`400`, `409`).
 
+**Exemple : l'email du compte (US03, US04)**
+
+| Où | Traitement | Pourquoi là |
+|---|---|---|
+| Front | retire les espaces, vérifie le format | confort : un email collé avec un espace en trop n'est pas bloqué |
+| Back, DTO | vérifie le format (`@Email` : `400` si espaces ou format faux) | sécurité : l'API peut être appelée sans le front |
+| Back, service | met en minuscules (`normalizeEmail`) | la forme de référence est fixée à un seul endroit, le serveur, pour tous les clients |
+| Base | unicité (`uk_account_email`) | garantie finale |
+
 ## Découpage interne
 
 ### Back — par couche
@@ -92,11 +122,11 @@ technique. C'est le back qui transforme chaque refus en réponse claire (`400`, 
 | `service/` | `AuthService`, `FileService`, `JwtService`, `FilePurgeService` | règles métier et validation serveur |
 | `repository/` | `AccountRepository`, `SharedFileRepository` | lecture et écriture en base (Spring Data JPA) |
 | `model/` | `Account`, `SharedFile` | entités JPA, le reflet des tables ; jamais renvoyées au client |
-| `dto/` | objets d'entrée et de sortie | la forme exacte des données échangées avec le front |
+| `dto/` | objets d'entrée et de sortie, suffixés `DTO` (`RegisterRequestDTO`) | la forme exacte des données échangées avec le front |
 | `mapper/` | interfaces MapStruct | convertit une entité en DTO. Ajoute des champs **calculés**, absents des tables : le statut, déduit de `expires_at` comparée à l'heure actuelle ; « protégé » (oui / non), qui fait afficher le cadenas et le champ mot de passe, déduit de `password_hash` sans jamais envoyer ce hash au front |
 | `storage/` | `FileStorage`, `LocalFileStorage` | écrit, lit et efface un fichier sur le disque, sans rien décider : ce sont les services qui choisissent quoi effacer (`FileService` pour la suppression US06, `FilePurgeService` pour la purge) |
 | `configuration/` | `SpringSecurityConfig`, `CustomUserDetailService` | routes publiques ou protégées, vérification du JWT |
-| `exception/` | `RestExceptionHandler`, `ErrorDetails` | transforme toute erreur en une réponse au même format |
+| `exception/` | `RestExceptionHandler`, exceptions métier (`EmailAlreadyUsedException`…) | transforme toute erreur en une réponse au même format (`ErrorDetailsDTO`) |
 
 Un controller ne parle qu'à un service. Un service parle aux repositories et à
 `FileStorage`, sans savoir où les octets sont rangés.
@@ -110,7 +140,7 @@ flowchart LR
   C --> S["AuthService"]
   S --> R["AccountRepository"] --> T[("table account")]
   S --> E["PasswordEncoder<br/>(BCrypt)"]
-  S -. "exception" .-> H["RestExceptionHandler<br/>→ ErrorDetails"]
+  S -. "exception" .-> H["RestExceptionHandler<br/>→ ErrorDetailsDTO"]
 ```
 
 | Couche | Sait | Ignore |
@@ -118,9 +148,26 @@ flowchart LR
 | `AuthController` | HTTP : route, corps JSON, code `201` | les règles métier, la base |
 | `AuthService` | les règles : email libre, mot de passe haché | HTTP, le SQL |
 | `AccountRepository` | lire et écrire la table `account` | pourquoi on lui demande |
-| `RestExceptionHandler` | traduire une exception en code et en `ErrorDetails` | où elle a été levée |
+| `RestExceptionHandler` | traduire une exception en code et en `ErrorDetailsDTO` | où elle a été levée |
 
 Les autres routes suivent le même chemin.
+
+#### Ordre de construction d'une route
+
+Chaque route est construite de bas en haut. Chaque pièce ne s'appuie que sur des pièces
+déjà écrites : tout compile et se vérifie à chaque étape.
+
+| # | Pièce | Traduit | Vérification |
+|---|---|---|---|
+| 1 | DTO | le contrat (`openapi.yaml`) | compilation |
+| 2 | entité + repository | le schéma (`V1__init.sql`) | démarrage : Hibernate compare l'entité à la table |
+| 3 | service | les règles métier, du DTO vers l'entité | tests unitaires |
+| 4 | `RestExceptionHandler` | les exceptions du service en codes HTTP | via la pièce 5 |
+| 5 | controller | le service, branché sur HTTP | test d'intégration, `curl` |
+
+Les pièces 1 et 2 transcrivent des décisions prises à la conception ; le service les
+relie. Le controller vient en dernier : il ne fait que brancher l'ensemble. Le front
+suit, une fois la route vérifiée.
 
 ### Front — par écran
 

@@ -161,6 +161,25 @@ des entités par Hibernate (`ddl-auto=validate`).
 Un script appliqué **ne se modifie plus** : l'empreinte changerait et l'application
 refuserait de démarrer. Toute évolution passe par un `V2__…`.
 
+### Le script, seule source du schéma
+
+**Les entités ne répètent pas les contraintes.** `@Column(nullable = false, unique = true,
+length = 254)` ne sert qu'à *générer* un schéma ; en `validate`, Hibernate vérifie
+l'existence et le type des colonnes, pas ces attributs. Les écrire créerait une seconde
+copie des règles que personne ne contrôle : passer `length` à 320 dans l'entité ne
+changerait rien en base, sans aucun signal. Contrepartie : lire l'entité ne suffit pas,
+les règles sont dans `V1__init.sql`.
+
+**Un même script partout.** Piège courant : un schéma généré par Hibernate en dev,
+écrit à la main en prod, qui divergent sans que personne ne le voie. Ici, le même script
+tourne en dev, dans les tests (Testcontainers) et en prod : il est testé avant d'y arriver.
+
+| | Rôle |
+|---|---|
+| `V1__init.sql` | définit le schéma et ses contraintes, appliquées quel que soit l'auteur de l'écriture (API, script SQL) |
+| Flyway | applique les scripts manquants, dans l'ordre |
+| Hibernate (`validate`) | refuse de démarrer si une entité ne correspond pas à sa table |
+
 Vérifier le résultat sur la base de dev (depuis `back/`) :
 
 ```bash

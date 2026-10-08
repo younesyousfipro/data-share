@@ -1,4 +1,4 @@
-package com.openclassrooms.datashare;
+package io.github.younesyousfipro.datashare;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
