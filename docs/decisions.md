@@ -582,7 +582,9 @@ chaque montée de version majeure (`MAINTENANCE.md`).
 
 **Décidé :** les **textes** orange (liens, libellés de bouton) passent en `#A0561A`,
 soit 5,5:1 sur blanc et 4,9:1 sur le fond du bouton principal. Le copyright du pied de
-page passe du blanc au noir. Fonds et bordures gardent les valeurs des maquettes.
+page passe du blanc au noir, et le texte indicatif des champs (*placeholder*) du gris
+`#B3B3B3` (2,1:1) au gris `#757575` (4,6:1). Fonds et bordures gardent les valeurs des
+maquettes.
 **Écarté :** les couleurs exactes des maquettes ; un orange différent pour chaque
 fond.
 **Pourquoi :** les spécifications demandent l'accessibilité, et la norme WCAG (niveau
