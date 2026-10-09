@@ -1,5 +1,7 @@
 package io.github.younesyousfipro.datashare.controller;
 
+import io.github.younesyousfipro.datashare.dto.LoginRequestDTO;
+import io.github.younesyousfipro.datashare.dto.LoginResponseDTO;
 import io.github.younesyousfipro.datashare.dto.RegisterRequestDTO;
 import io.github.younesyousfipro.datashare.service.AuthService;
 import jakarta.validation.Valid;
@@ -22,6 +24,11 @@ public class AuthController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public void register(@Valid @RequestBody RegisterRequestDTO request) {
 		authService.register(request);
+	}
+
+	@PostMapping("/login")
+	public LoginResponseDTO login(@Valid @RequestBody LoginRequestDTO request) {
+		return authService.login(request);
 	}
 
 }

@@ -23,6 +23,11 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 		return ResponseEntity.status(HttpStatus.CONFLICT).body(errorDetails(e.getMessage(), request));
 	}
 
+	@ExceptionHandler(InvalidCredentialsException.class)
+	public ResponseEntity<ErrorDetailsDTO> handleInvalidCredentials(InvalidCredentialsException e, WebRequest request) {
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorDetails(e.getMessage(), request));
+	}
+
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorDetailsDTO> handleUnexpected(Exception e, WebRequest request) {
 		logger.error("Unexpected error on " + request.getDescription(false), e);
