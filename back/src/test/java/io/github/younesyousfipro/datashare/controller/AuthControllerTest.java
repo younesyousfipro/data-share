@@ -25,7 +25,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(TestcontainersConfiguration.class)
 class AuthControllerTest {
 
-	private static final String URL = "/api/auth/register";
+	private static final String REGISTER_URL = "/api/auth/register";
+	private static final String LOGIN_URL = "/api/auth/login";
 	private static final String EMAIL = "marie@mail.fr";
 	private static final String PASSWORD = "s3cretPass";
 
@@ -62,7 +63,7 @@ class AuthControllerTest {
 				// THEN
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.message").value("This email is already used"))
-				.andExpect(jsonPath("$.details").value("uri=" + URL))
+				.andExpect(jsonPath("$.details").value("uri=" + REGISTER_URL))
 				.andExpect(jsonPath("$.timestamp").exists());
 	}
 
@@ -95,17 +96,71 @@ class AuthControllerTest {
 
 	@Test
 	void register_returns400InSameFormatWhenJsonIsMalformed() throws Exception {
-		mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content("{\"email\":"))
+		mockMvc.perform(post(REGISTER_URL).contentType(MediaType.APPLICATION_JSON).content("{\"email\":"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").exists())
-				.andExpect(jsonPath("$.details").value("uri=" + URL));
+				.andExpect(jsonPath("$.details").value("uri=" + REGISTER_URL));
+	}
+
+	@Test
+	void login_returns200WithTokenWhateverTheEmailCase() throws Exception {
+		// GIVEN
+		register(EMAIL, PASSWORD);
+
+		// WHEN
+		login("Marie@Mail.FR", PASSWORD)
+				// THEN
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.token").isNotEmpty());
+	}
+
+	@Test
+	void login_returns401WithSameMessageForUnknownEmailAndWrongPassword() throws Exception {
+		// GIVEN
+		register(EMAIL, PASSWORD);
+		String message = "Invalid email or password";
+
+		// WHEN / THEN
+		login("unknown@mail.fr", PASSWORD)
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.message").value(message))
+				.andExpect(jsonPath("$.details").value("uri=" + LOGIN_URL));
+		login(EMAIL, "wrongPass")
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.message").value(message));
+	}
+
+	// BCrypt only reads 72 bytes: the encoder must answer "no match", not fail with a 500
+	@Test
+	void login_returns401WhenPasswordExceeds72Bytes() throws Exception {
+		// GIVEN
+		register(EMAIL, PASSWORD);
+
+		// WHEN / THEN
+		login(EMAIL, "a".repeat(100))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void login_returns400WhenEmailIsInvalid() throws Exception {
+		login("not-an-email", PASSWORD)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(containsString("email")));
 	}
 
 	private ResultActions register(String email, String password) throws Exception {
+		return postCredentials(REGISTER_URL, email, password);
+	}
+
+	private ResultActions login(String email, String password) throws Exception {
+		return postCredentials(LOGIN_URL, email, password);
+	}
+
+	private ResultActions postCredentials(String url, String email, String password) throws Exception {
 		String body = """
 				{"email": "%s", "password": "%s"}
 				""".formatted(email, password);
-		return mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(body));
+		return mockMvc.perform(post(url).contentType(MediaType.APPLICATION_JSON).content(body));
 	}
 
 }

@@ -625,3 +625,60 @@ enverrait deux requêtes, et la seconde afficherait « email déjà utilisé » 
 compte que l'on vient de créer.
 **Conséquence assumée :** tant que l'US04 n'existe pas, la redirection mène à une route
 inconnue (erreur en console).
+
+---
+
+## 2026-10-09 — Connexion : mot de passe vérifié dans `AuthService`
+
+**Décidé :** `AuthService.login` cherche le compte par email puis compare le mot de
+passe avec `PasswordEncoder.matches` ; un échec lève `InvalidCredentialsException`
+(`401`, même message pour email inconnu et mot de passe faux).
+**Écarté :** la chaîne Spring du P2 (`AuthenticationManager`,
+`DaoAuthenticationProvider`, `CustomUserDetailService`).
+**Pourquoi :** deux lignes lisibles au lieu de trois classes de configuration ; le
+`401` sort directement au format `ErrorDetailsDTO`, sans traduire une
+`BadCredentialsException`.
+**Conséquence assumée :** un email inconnu répond plus vite qu'un mot de passe faux
+(BCrypt n'est pas appelé), ce qui permet en théorie de deviner un email inscrit.
+Ignoré : l'inscription le révèle déjà (`409`), et le prototype n'est pas destiné à
+la production.
+
+---
+
+## 2026-10-09 — Contenu du JWT : identifiant du compte, 1 heure
+
+**Décidé :** `sub` = identifiant du compte (`account_id`), expiration à 1 heure,
+signature HS256.
+**Écarté :** l'email dans `sub` (choix du P2, où `sub` portait le login).
+**Pourquoi :** US05 et US06 cherchent les fichiers par `account_id` : avec l'email,
+chaque requête devrait relire le compte en base pour retrouver son identifiant.
+L'identifiant, lui, ne change jamais.
+**Conséquence assumée :** pas de jeton de rafraîchissement ; l'utilisateur se
+reconnecte au bout d'une heure.
+
+---
+
+## 2026-10-09 — Clé de signature du JWT dans `.env`
+
+**Décidé :** clé `JWT_SECRET` dans le `.env` du back, déjà utilisé pour la base,
+importé par Spring (`spring.config.import`). Aucune valeur par défaut : sans clé,
+l'API refuse de démarrer. Les tests reçoivent une clé factice par la configuration
+Maven (Surefire).
+**Écarté :** une clé écrite dans `application.properties` ; une valeur par défaut.
+**Pourquoi :** un seul fichier de secrets, non versionné et déjà documenté. Une clé par
+défaut dans le code finit un jour par servir en production.
+**Conséquence assumée :** un `.env` créé avant l'US04 doit recevoir la ligne
+`JWT_SECRET`. En production, la clé viendrait d'un gestionnaire de secrets.
+
+---
+
+## 2026-10-09 — Vérification des JWT entrants reportée à US01
+
+**Décidé :** l'US04 **émet** le jeton (`JwtEncoder`) ; sa vérification sur les routes
+protégées (`JwtDecoder`, `.oauth2ResourceServer(...)`) arrive avec l'US01.
+**Écarté :** tout brancher dès l'US04, comme le schéma de connexion de
+`architecture.md` le laisse entendre.
+**Pourquoi :** aucune route protégée n'existe encore ; la vérification ne serait ni
+utilisée ni testable.
+**Conséquence assumée :** entre l'US04 et l'US01, un jeton est émis sans qu'aucune route
+ne le demande.

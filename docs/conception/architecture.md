@@ -125,11 +125,30 @@ technique. C'est le back qui transforme chaque refus en réponse claire (`400`, 
 | `dto/` | objets d'entrée et de sortie, suffixés `DTO` (`RegisterRequestDTO`) | la forme exacte des données échangées avec le front |
 | `mapper/` | interfaces MapStruct | convertit une entité en DTO. Ajoute des champs **calculés**, absents des tables : le statut, déduit de `expires_at` comparée à l'heure actuelle ; « protégé » (oui / non), qui fait afficher le cadenas et le champ mot de passe, déduit de `password_hash` sans jamais envoyer ce hash au front |
 | `storage/` | `FileStorage`, `LocalFileStorage` | écrit, lit et efface un fichier sur le disque, sans rien décider : ce sont les services qui choisissent quoi effacer (`FileService` pour la suppression US06, `FilePurgeService` pour la purge) |
-| `configuration/` | `SpringSecurityConfig`, `CustomUserDetailService` | routes publiques ou protégées, vérification du JWT |
+| `configuration/` | `SpringSecurityConfig` | routes publiques ou protégées ; fabrique les outils de sécurité (BCrypt, signature et vérification du JWT) |
 | `exception/` | `RestExceptionHandler`, exceptions métier (`EmailAlreadyUsedException`…) | transforme toute erreur en une réponse au même format (`ErrorDetailsDTO`) |
 
 Un controller ne parle qu'à un service. Un service parle aux repositories et à
 `FileStorage`, sans savoir où les octets sont rangés.
+
+#### Outils de sécurité : qui fait quoi
+
+`SpringSecurityConfig` fabrique les outils (`@Bean`) ; les services les déclarent
+dans leur constructeur ; Spring les leur remet au démarrage (**injection de
+dépendances**). Exemple avec le JWT :
+
+- **le service** sait **quoi** faire : `JwtService` choisit le contenu du jeton (`sub`, `exp`) ;
+- **l'outil** sait **comment** le faire : `JwtEncoder` signe en HS256 avec la clé ;
+- **Spring** se contente de **les mettre en relation** au démarrage.
+
+```
+démarrage :  SpringSecurityConfig ──fabrique──► JwtEncoder ──Spring le remet──► JwtService
+connexion :  JwtService choisit le contenu ──appelle──► jwtEncoder.encode() ──► jeton signé
+```
+
+Même partage pour le mot de passe : `AuthService` décide **quand** hacher,
+`PasswordEncoder` sait **comment** (BCrypt). Changer d'algorithme ne touche que la
+configuration ; un test peut passer ses propres outils au constructeur, sans Spring.
 
 #### Parcours d'une requête : l'inscription (US03)
 
@@ -222,7 +241,7 @@ sequenceDiagram
   A-->>F: 200 + JWT
   F->>F: stocke le JWT (localStorage)
 
-  Note over F,A: toutes les requêtes suivantes
+  Note over F,A: toutes les requêtes suivantes (vérification à partir d'US01)
   F->>A: requête + Authorization: Bearer JWT (ajouté par l'intercepteur)
   A->>A: vérifie signature et expiration, sinon 401
   A->>A: lit l'identifiant du compte dans le JWT
@@ -232,6 +251,33 @@ L'identité vient **toujours du JWT**, jamais d'un paramètre : l'historique (US
 et la suppression (US06) savent ainsi à qui ils répondent, sans qu'on puisse se faire
 passer pour un autre compte. Un message identique pour « email inconnu » et « mot de
 passe faux » évite de révéler quels emails sont inscrits.
+
+#### Le JWT et sa clé de signature
+
+Un JWT a trois parties : `en-tête.contenu.signature`. Le contenu
+(`{"sub": "42", "exp": …}`) est **encodé, pas chiffré** : n'importe qui peut le lire,
+et l'utilisateur peut le modifier dans son navigateur (`"42"` → `"1"`).
+
+La **clé de signature** (`JWT_SECRET`) sert à **authentifier le jeton comme émis
+par notre back** : elle garantit son **origine** et son **intégrité** (personne ne l'a
+modifié).
+
+| Moment | Ce que fait Spring avec la clé |
+|---|---|
+| Connexion (US04) | `signature = HMAC-SHA256(contenu, clé)`, jointe au jeton |
+| Chaque requête protégée (à partir d'US01) | recalcule la signature du contenu reçu et la compare : différente → `401` ; identique → vérifie encore `exp` |
+
+Modifier le contenu oblige à recalculer la signature, ce qui demande la clé. Celui qui
+la détient peut donc se faire passer pour **n'importe quel compte** : elle reste sur le
+serveur (`.env`, jamais versionné), et l'API refuse de démarrer sans elle. Le front ne
+manipule que des jetons, jamais la clé.
+
+Le reverse proxy et TLS ne remplacent pas ce contrôle : un jeton forgé voyage en HTTPS
+comme un vrai, et seul le détenteur de la clé peut les distinguer.
+
+HS256 est **symétrique** : la même clé signe et vérifie, ce qui convient à un back qui
+fait les deux. Un service tiers qui devrait seulement vérifier les jetons demanderait
+une paire de clés (RS256).
 
 L'inscription (US03) suit le même chemin sans émettre de JWT : email unique vérifié,
 mot de passe haché, réponse 201 ; l'utilisateur se connecte ensuite.
