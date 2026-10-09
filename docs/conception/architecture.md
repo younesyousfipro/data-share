@@ -191,12 +191,12 @@ suit, une fois la route vérifiée.
 ### Front — par écran
 
 ```
-styles.css    design tokens + classes partagées : .card, .field, .button-primary, .callout-error…
+styles.css    design tokens + classes partagées : .card, .field, .button-primary, .callout-error, .callout-info…
 app/
-  app.*       coquille commune : header, <router-outlet>, footer
+  app.*       coquille commune : <app-header>, <router-outlet>, footer
   core/       api.models, auth.service · plus tard auth.interceptor (ajoute le JWT), auth.guard
-  features/   auth/ (inscription, connexion) · upload/ · download/ · my-files/
-  shared/     composants réutilisés qui ont un comportement (header connecté, US04)
+  features/   auth/ (register/, login/) · upload/ · download/ · my-files/
+  shared/     composants réutilisés qui ont un comportement : header/ (« Se connecter » ou « Mon espace »)
 ```
 
 Un élément **sans comportement** (bouton, champ, carte) est une classe CSS ; il ne
@@ -216,6 +216,25 @@ découlent tous les deux, aucun ne copie l'autre.
 résultat.** Un `Observable` ne part qu'à l'abonnement : sans `subscribe`, aucune
 requête n'est envoyée.
 
+#### État de connexion (US04)
+
+`AuthService` est le seul à connaître le jeton. Les pages et le header ne voient que
+`isLoggedIn`.
+
+```
+login() ──200──► tap : jeton dans localStorage + signal token ──► isLoggedIn (computed) ──► header : « Mon espace »
+        ──401──► tap sauté, rien n'est enregistré ──────────────────────────────────────► page : message d'erreur
+```
+
+| Support | Survit au rechargement | Prévient l'affichage quand il change |
+|---|---|---|
+| `localStorage` | oui | non |
+| signal `token` | non | oui : le header se met à jour sans rechargement |
+
+Le signal démarre avec la valeur de `localStorage` ; `login()` met à jour les deux.
+« Connecté » signifie « un jeton est présent » : sa validité reste jugée par l'API
+(décision du 2026-10-09).
+
 ## Flux principaux
 
 Les routes ci-dessous sont celles du [contrat d'interface](contrat-interface.md).
@@ -230,7 +249,7 @@ sequenceDiagram
   participant B as Base
 
   U->>F: email et mot de passe
-  F->>F: validation client : format de l'email, 8 caractères minimum
+  F->>F: validation client : format de l'email, champs remplis
   F->>A: POST /api/auth/login (route publique)
   A->>B: cherche le compte par email
   A->>A: compare le mot de passe à password_hash (BCrypt)

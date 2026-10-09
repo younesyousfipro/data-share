@@ -682,3 +682,43 @@ protégées (`JwtDecoder`, `.oauth2ResourceServer(...)`) arrive avec l'US01.
 utilisée ni testable.
 **Conséquence assumée :** entre l'US04 et l'US01, un jeton est émis sans qu'aucune route
 ne le demande.
+
+---
+
+## 2026-10-09 — Connexion côté front : redirection et messages d'erreur
+
+**Décidé :** après un `200`, le front enregistre le jeton puis redirige vers `/`. En
+attendant l'accueil de l'US01, `/` redirige vers `/login`. Les messages sont choisis
+d'après le code HTTP : `401` → « Email ou mot de passe incorrect. », tout autre échec
+→ message générique. Un second clic pendant l'envoi est ignoré.
+**Écarté :** créer l'accueil dès maintenant ; afficher le `message` de l'API.
+**Pourquoi :** l'accueil est l'écran de dépôt (US01) et n'a pas sa place ici. Pour les
+messages, même règle qu'à l'inscription.
+**Conséquence assumée :** jusqu'à l'US01, une connexion réussie ramène au formulaire ;
+seul le header (« Mon espace ») montre qu'elle a fonctionné.
+
+---
+
+## 2026-10-09 — Message « compte créé » transmis par l'URL
+
+**Décidé :** l'inscription redirige vers `/login?registered=true` ; la page de
+connexion affiche un message d'information quand ce paramètre est présent.
+**Écarté :** l'état de navigation du routeur (`navigate(..., { state })`).
+**Pourquoi :** le paramètre est visible, simple à lire (`ActivatedRoute`) et à tester
+(il suffit de naviguer vers l'URL). L'état de navigation est caché et plus difficile
+à reproduire dans un test.
+**Conséquence assumée :** recharger la page affiche à nouveau le message.
+
+---
+
+## 2026-10-09 — Côté front, « connecté » signifie « un jeton est enregistré »
+
+**Décidé :** l'utilisateur est considéré comme connecté dès qu'un jeton est présent
+dans `localStorage` ; le front ne lit pas sa date d'expiration.
+**Écarté :** décoder le jeton pour en lire `exp`.
+**Pourquoi :** l'API reste juge de la validité du jeton. Lire `exp` côté front
+dupliquerait cette vérification sans rien sécuriser.
+**Conséquence assumée :** une heure après la connexion, le header affiche encore
+« Mon espace » alors que le jeton a expiré. Corrigé à l'US01 : l'intercepteur traitera
+le `401` (il efface le jeton et redirige vers `/login`). La déconnexion volontaire
+arrive avec « Mon espace » (US05).

@@ -98,6 +98,11 @@ L'application est servie sur http://localhost:4200 et se recharge à chaque sauv
 **Le back doit tourner** pour que les écrans fonctionnent : les appels à l'API passent
 par le proxy de dev (ci-dessous).
 
+Parcours disponibles : création de compte (`/register`) puis connexion (`/login`).
+Jusqu'à l'US01, l'accueil (`/`) redirige vers la connexion ; une connexion réussie se
+voit au bouton « Mon espace » du header. Pour se déconnecter en attendant l'US05,
+supprimer la clé `token` du `localStorage` (outils de développement > Application).
+
 ### Appels à l'API : le proxy de dev
 
 ```
