@@ -2,6 +2,10 @@
   <h1 id="register-title" class="card-title">Créer un compte</h1>
 
   <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+    @if (serverError(); as error) {
+      <p class="callout-error" role="alert">{{ error }}</p>
+    }
+
     <div class="field">
       <label for="email">Email</label>
       <input

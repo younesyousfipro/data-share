@@ -1,6 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/auth.service';
 
 const passwordsMatch: ValidatorFn = (form) =>
   form.get('password')?.value === form.get('confirmPassword')?.value
@@ -13,6 +15,14 @@ const passwordsMatch: ValidatorFn = (form) =>
   templateUrl: './register.html',
 })
 export class Register {
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+
+  // Guards against a double click, whose second request would get a 409
+  private submitting = false;
+
+  protected readonly serverError = signal<string | null>(null);
+
   protected readonly form = inject(NonNullableFormBuilder).group(
     {
       email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
@@ -30,9 +40,24 @@ export class Register {
   protected submit(): void {
     this.trimEmail();
     this.form.markAllAsTouched();
-    if (this.form.invalid) {
+    if (this.form.invalid || this.submitting) {
       return;
     }
+
+    this.submitting = true;
+    this.serverError.set(null);
+    const { email, password } = this.form.getRawValue();
+    this.authService.register({ email, password }).subscribe({
+      next: () => this.router.navigate(['/login']),
+      error: (error: HttpErrorResponse) => {
+        this.submitting = false;
+        this.serverError.set(
+          error.status === 409
+            ? 'Cet email est déjà utilisé.'
+            : 'Une erreur est survenue, veuillez réessayer.',
+        );
+      },
+    });
   }
 
   protected emailError(): string | null {
