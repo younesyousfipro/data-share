@@ -1,6 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/auth.service';
 
 // Same rules as LoginRequestDTO: the password length is checked at registration only
 @Component({
@@ -9,6 +11,13 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
   templateUrl: './login.html',
 })
 export class Login {
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+
+  private submitting = false;
+
+  protected readonly serverError = signal<string | null>(null);
+
   protected readonly accountCreated =
     inject(ActivatedRoute).snapshot.queryParamMap.get('registered') === 'true';
 
@@ -25,6 +34,23 @@ export class Login {
   protected submit(): void {
     this.trimEmail();
     this.form.markAllAsTouched();
+    if (this.form.invalid || this.submitting) {
+      return;
+    }
+
+    this.submitting = true;
+    this.serverError.set(null);
+    this.authService.login(this.form.getRawValue()).subscribe({
+      next: () => this.router.navigate(['/']),
+      error: (error: HttpErrorResponse) => {
+        this.submitting = false;
+        this.serverError.set(
+          error.status === 401
+            ? 'Email ou mot de passe incorrect.'
+            : 'Une erreur est survenue, veuillez réessayer.',
+        );
+      },
+    });
   }
 
   protected emailError(): string | null {

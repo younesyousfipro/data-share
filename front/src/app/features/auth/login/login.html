@@ -5,6 +5,9 @@
     @if (accountCreated) {
       <p class="callout-info" role="status">Votre compte a été créé, vous pouvez vous connecter.</p>
     }
+    @if (serverError(); as error) {
+      <p class="callout-error" role="alert">{{ error }}</p>
+    }
 
     <div class="field">
       <label for="email">Email</label>
