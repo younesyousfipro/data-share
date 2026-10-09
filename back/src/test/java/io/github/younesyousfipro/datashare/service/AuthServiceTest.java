@@ -1,7 +1,9 @@
 package io.github.younesyousfipro.datashare.service;
 
+import io.github.younesyousfipro.datashare.dto.LoginRequestDTO;
 import io.github.younesyousfipro.datashare.dto.RegisterRequestDTO;
 import io.github.younesyousfipro.datashare.exception.EmailAlreadyUsedException;
+import io.github.younesyousfipro.datashare.exception.InvalidCredentialsException;
 import io.github.younesyousfipro.datashare.model.Account;
 import io.github.younesyousfipro.datashare.repository.AccountRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +15,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,6 +34,9 @@ class AuthServiceTest {
 	@Mock
 	private AccountRepository accountRepository;
 
+	@Mock
+	private JwtService jwtService;
+
 	// Real encoder: pure computation without I/O, a mock would isolate from nothing
 	private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -37,7 +44,7 @@ class AuthServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		authService = new AuthService(accountRepository, passwordEncoder);
+		authService = new AuthService(accountRepository, passwordEncoder, jwtService);
 	}
 
 	@Test
@@ -76,6 +83,49 @@ class AuthServiceTest {
 		// WHEN / THEN
 		assertThatThrownBy(() -> authService.register(new RegisterRequestDTO(EMAIL, PASSWORD)))
 				.isInstanceOf(EmailAlreadyUsedException.class);
+	}
+
+	@Test
+	void login_returnsTokenWhenCredentialsMatchWhateverTheEmailCase() {
+		// GIVEN
+		Account account = accountWithPassword(PASSWORD);
+		when(accountRepository.findByEmail(EMAIL)).thenReturn(Optional.of(account));
+		when(jwtService.generateToken(account)).thenReturn("signed-token");
+
+		// WHEN
+		String token = authService.login(new LoginRequestDTO("Marie@Mail.FR", PASSWORD)).token();
+
+		// THEN
+		assertThat(token).isEqualTo("signed-token");
+	}
+
+	@Test
+	void login_rejectsUnknownEmail() {
+		// GIVEN
+		when(accountRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> authService.login(new LoginRequestDTO(EMAIL, PASSWORD)))
+				.isInstanceOf(InvalidCredentialsException.class);
+		verify(jwtService, never()).generateToken(any());
+	}
+
+	@Test
+	void login_rejectsWrongPassword() {
+		// GIVEN
+		when(accountRepository.findByEmail(EMAIL)).thenReturn(Optional.of(accountWithPassword(PASSWORD)));
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> authService.login(new LoginRequestDTO(EMAIL, "wrongPass")))
+				.isInstanceOf(InvalidCredentialsException.class);
+		verify(jwtService, never()).generateToken(any());
+	}
+
+	private Account accountWithPassword(String password) {
+		Account account = new Account();
+		account.setEmail(EMAIL);
+		account.setPasswordHash(passwordEncoder.encode(password));
+		return account;
 	}
 
 }
