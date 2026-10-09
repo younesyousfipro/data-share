@@ -1,7 +1,10 @@
 package io.github.younesyousfipro.datashare.service;
 
+import io.github.younesyousfipro.datashare.dto.LoginRequestDTO;
+import io.github.younesyousfipro.datashare.dto.LoginResponseDTO;
 import io.github.younesyousfipro.datashare.dto.RegisterRequestDTO;
 import io.github.younesyousfipro.datashare.exception.EmailAlreadyUsedException;
+import io.github.younesyousfipro.datashare.exception.InvalidCredentialsException;
 import io.github.younesyousfipro.datashare.model.Account;
 import io.github.younesyousfipro.datashare.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ public class AuthService {
 
 	private final AccountRepository accountRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final JwtService jwtService;
 
 	public void register(RegisterRequestDTO request) {
 		String email = normalizeEmail(request.email());
@@ -34,6 +38,15 @@ public class AuthService {
 			// Same email registered concurrently: the unique constraint rejected the second one
 			throw new EmailAlreadyUsedException();
 		}
+	}
+
+	public LoginResponseDTO login(LoginRequestDTO request) {
+		Account account = accountRepository.findByEmail(normalizeEmail(request.email()))
+				.orElseThrow(InvalidCredentialsException::new);
+		if (!passwordEncoder.matches(request.password(), account.getPasswordHash())) {
+			throw new InvalidCredentialsException();
+		}
+		return new LoginResponseDTO(jwtService.generateToken(account));
 	}
 
 	// Locale.ROOT: same result whatever the server language
