@@ -116,3 +116,25 @@ npm run test:coverage   # passage unique + couverture, échoue sous 70 %
 
 Tests unitaires exécutés par Vitest, dans un navigateur simulé (jsdom) : aucun
 navigateur ne s'ouvre. Rapport de couverture : `coverage/index.html`.
+
+## Utiliser l'API sans le front
+
+Avec le back lancé, l'API répond directement sur le port 8080 :
+
+```bash
+curl -i -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "marie@mail.fr", "password": "s3cretPass"}'
+```
+
+| Code | Signification |
+|---|---|
+| `201` | compte créé, corps vide |
+| `400` | email invalide ou mot de passe hors 8 à 18 caractères |
+| `409` | email déjà utilisé, quelle que soit la casse |
+
+Les erreurs ont toutes le même format JSON (`timestamp`, `message`, `details`).
+
+Toutes les routes sont décrites dans
+[`docs/conception/openapi.yaml`](docs/conception/openapi.yaml). Avec **Postman** :
+*Import* de ce fichier, qui crée une requête prête à l'emploi par route.
