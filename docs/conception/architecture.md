@@ -125,11 +125,30 @@ technique. C'est le back qui transforme chaque refus en réponse claire (`400`, 
 | `dto/` | objets d'entrée et de sortie, suffixés `DTO` (`RegisterRequestDTO`) | la forme exacte des données échangées avec le front |
 | `mapper/` | interfaces MapStruct | convertit une entité en DTO. Ajoute des champs **calculés**, absents des tables : le statut, déduit de `expires_at` comparée à l'heure actuelle ; « protégé » (oui / non), qui fait afficher le cadenas et le champ mot de passe, déduit de `password_hash` sans jamais envoyer ce hash au front |
 | `storage/` | `FileStorage`, `LocalFileStorage` | écrit, lit et efface un fichier sur le disque, sans rien décider : ce sont les services qui choisissent quoi effacer (`FileService` pour la suppression US06, `FilePurgeService` pour la purge) |
-| `configuration/` | `SpringSecurityConfig`, `CustomUserDetailService` | routes publiques ou protégées, vérification du JWT |
+| `configuration/` | `SpringSecurityConfig` | routes publiques ou protégées ; fabrique les outils de sécurité (BCrypt, signature et vérification du JWT) |
 | `exception/` | `RestExceptionHandler`, exceptions métier (`EmailAlreadyUsedException`…) | transforme toute erreur en une réponse au même format (`ErrorDetailsDTO`) |
 
 Un controller ne parle qu'à un service. Un service parle aux repositories et à
 `FileStorage`, sans savoir où les octets sont rangés.
+
+#### Outils de sécurité : qui fait quoi
+
+`SpringSecurityConfig` fabrique les outils (`@Bean`) ; les services les déclarent
+dans leur constructeur ; Spring les leur remet au démarrage (**injection de
+dépendances**). Exemple avec le JWT :
+
+- **le service** sait **quoi** faire : `JwtService` choisit le contenu du jeton (`sub`, `exp`) ;
+- **l'outil** sait **comment** le faire : `JwtEncoder` signe en HS256 avec la clé ;
+- **Spring** se contente de **les mettre en relation** au démarrage.
+
+```
+démarrage :  SpringSecurityConfig ──fabrique──► JwtEncoder ──Spring le remet──► JwtService
+connexion :  JwtService choisit le contenu ──appelle──► jwtEncoder.encode() ──► jeton signé
+```
+
+Même partage pour le mot de passe : `AuthService` décide **quand** hacher,
+`PasswordEncoder` sait **comment** (BCrypt). Changer d'algorithme ne touche que la
+configuration ; un test peut passer ses propres outils au constructeur, sans Spring.
 
 #### Parcours d'une requête : l'inscription (US03)
 
@@ -222,7 +241,7 @@ sequenceDiagram
   A-->>F: 200 + JWT
   F->>F: stocke le JWT (localStorage)
 
-  Note over F,A: toutes les requêtes suivantes
+  Note over F,A: toutes les requêtes suivantes (vérification à partir d'US01)
   F->>A: requête + Authorization: Bearer JWT (ajouté par l'intercepteur)
   A->>A: vérifie signature et expiration, sinon 401
   A->>A: lit l'identifiant du compte dans le JWT

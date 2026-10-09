@@ -29,10 +29,17 @@ cd back
 cp .env.example .env
 ```
 
-`.env` contient les identifiants de la base de dev ; il n'est pas versionné. Le mot
-de passe peut être changé **avant** le premier lancement : il est lu uniquement à la
-création de la base. Pour le changer ensuite, supprimer la base avec
-`docker compose down -v` (toutes les données sont perdues).
+`.env` contient les identifiants de la base de dev et la clé de signature des JWT ;
+il n'est pas versionné. Le mot de passe de la base peut être changé **avant** le premier
+lancement : il est lu uniquement à la création de la base. Pour le changer ensuite,
+supprimer la base avec `docker compose down -v` (toutes les données sont perdues).
+
+**Clé JWT** (`JWT_SECRET`, 32 caractères minimum) : sans elle, l'API refuse de démarrer.
+Pour en générer une, ou pour l'ajouter à un `.env` créé avant l'US04 (depuis `back/`) :
+
+```bash
+echo "JWT_SECRET=$(openssl rand -base64 32)" >> .env
+```
 
 ### Lancement
 
@@ -132,6 +139,20 @@ curl -i -X POST http://localhost:8080/api/auth/register \
 | `201` | compte créé, corps vide |
 | `400` | email invalide ou mot de passe hors 8 à 18 caractères |
 | `409` | email déjà utilisé, quelle que soit la casse |
+
+Puis se connecter pour obtenir un JWT :
+
+```bash
+curl -i -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "marie@mail.fr", "password": "s3cretPass"}'
+```
+
+| Code | Signification |
+|---|---|
+| `200` | `{"token": "eyJ..."}`, valable 1 heure |
+| `400` | email invalide ou champ vide |
+| `401` | email inconnu ou mot de passe faux (même message dans les deux cas) |
 
 Les erreurs ont toutes le même format JSON (`timestamp`, `message`, `details`).
 
