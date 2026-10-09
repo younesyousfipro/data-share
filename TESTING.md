@@ -15,6 +15,10 @@ Stratégie de test de DataShare, tenue à jour à chaque user story.
 **Convention back** : un service est testé en **unitaire** (ses règles, isolées) ; un
 controller en **intégration** (la chaîne complète). Un controller ne fait que relier HTTP au service.
 
+**Convention front** : un service est testé contre un faux serveur HTTP
+(`HttpTestingController`) ; un composant est testé **par son HTML** (on remplit un champ,
+on lit le message affiché), avec des services simulés (`vi.fn()`).
+
 ## Fonctionnalités critiques
 
 Identifiées avant le développement : ce sont elles que les tests doivent couvrir en
@@ -59,3 +63,5 @@ commande échoue (décision du 2026-10-07).
 |---|---|---|
 | `AuthServiceTest` | unitaire | email enregistré en minuscules et mot de passe haché · email déjà pris refusé sans enregistrement · email pris par une inscription simultanée (contrainte d'unicité) |
 | `AuthControllerTest` | intégration | `201` et hash BCrypt en base · `409` même avec une casse différente, au format `ErrorDetailsDTO` · `400` : email invalide, email entouré d'espaces, mot de passe trop court (sans renvoyer la valeur), mot de passe de plus de 18 caractères, JSON mal formé |
+| `auth.service.spec.ts` (front) | unitaire | `POST /api/auth/register` avec l'email et le mot de passe |
+| `register.spec.ts` (front) | unitaire | aucune erreur avant de quitter un champ · formulaire vide : trois erreurs · email mal formé, erreur reliée au champ (`aria-invalid`, `aria-describedby`) · espaces retirés de l'email · mot de passe hors 8 à 18 caractères · confirmation différente · aucun appel si le formulaire est invalide · envoi de l'email et du mot de passe seuls, puis redirection vers `/login` · `409` : « email déjà utilisé » · autre erreur : message générique · double clic : une seule requête |
