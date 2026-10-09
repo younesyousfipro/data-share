@@ -233,6 +233,33 @@ et la suppression (US06) savent ainsi à qui ils répondent, sans qu'on puisse s
 passer pour un autre compte. Un message identique pour « email inconnu » et « mot de
 passe faux » évite de révéler quels emails sont inscrits.
 
+#### Le JWT et sa clé de signature
+
+Un JWT a trois parties : `en-tête.contenu.signature`. Le contenu
+(`{"sub": "42", "exp": …}`) est **encodé, pas chiffré** : n'importe qui peut le lire,
+et l'utilisateur peut le modifier dans son navigateur (`"42"` → `"1"`).
+
+La **clé de signature** (`JWT_SECRET`) sert à **authentifier le jeton comme émis
+par notre back** : elle garantit son **origine** et son **intégrité** (personne ne l'a
+modifié).
+
+| Moment | Ce que fait Spring avec la clé |
+|---|---|
+| Connexion (US04) | `signature = HMAC-SHA256(contenu, clé)`, jointe au jeton |
+| Chaque requête protégée (à partir d'US01) | recalcule la signature du contenu reçu et la compare : différente → `401` ; identique → vérifie encore `exp` |
+
+Modifier le contenu oblige à recalculer la signature, ce qui demande la clé. Celui qui
+la détient peut donc se faire passer pour **n'importe quel compte** : elle reste sur le
+serveur (`.env`, jamais versionné), et l'API refuse de démarrer sans elle. Le front ne
+manipule que des jetons, jamais la clé.
+
+Le reverse proxy et TLS ne remplacent pas ce contrôle : un jeton forgé voyage en HTTPS
+comme un vrai, et seul le détenteur de la clé peut les distinguer.
+
+HS256 est **symétrique** : la même clé signe et vérifie, ce qui convient à un back qui
+fait les deux. Un service tiers qui devrait seulement vérifier les jetons demanderait
+une paire de clés (RS256).
+
 L'inscription (US03) suit le même chemin sans émettre de JWT : email unique vérifié,
 mot de passe haché, réponse 201 ; l'utilisateur se connecte ensuite.
 
