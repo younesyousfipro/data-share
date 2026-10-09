@@ -575,3 +575,33 @@ seul format évite au front deux cas à traiter. La valeur refusée peut être u
 passe : ni réponse ni log ne la contiennent.
 **Conséquence assumée :** dépend des méthodes à surcharger de Spring ; à vérifier à
 chaque montée de version majeure (`MAINTENANCE.md`).
+
+---
+
+## 2026-10-09 — Contraste : textes orange assombris
+
+**Décidé :** les **textes** orange (liens, libellés de bouton) passent en `#A0561A`,
+soit 5,5:1 sur blanc et 4,9:1 sur le fond du bouton principal. Le copyright du pied de
+page passe du blanc au noir. Fonds et bordures gardent les valeurs des maquettes.
+**Écarté :** les couleurs exactes des maquettes ; un orange différent pour chaque
+fond.
+**Pourquoi :** les spécifications demandent l'accessibilité, et la norme WCAG (niveau
+AA) exige un contraste de 4,5:1 pour un texte courant. Mesures de la maquette :
+`#E27F29` = 2,9:1 sur blanc, `#BA681F` = 4,1:1, blanc sur le bas du dégradé = 3,5:1.
+La teinte reste la même à l'œil, seule la luminosité baisse.
+**Conséquence assumée :** écart visible, mais léger, avec les maquettes qui « doivent
+être respectées ». Un seul orange de texte pour tout le site.
+
+---
+
+## 2026-10-09 — Responsive : un seul point de rupture, 768 px
+
+**Décidé :** styles écrits pour le mobile par défaut, une seule règle
+`@media (min-width: 768px)` pour le desktop. Les cartes sont fluides (640 px au plus).
+**Écarté :** plusieurs points de rupture (tablette, grand écran) ; deux feuilles de
+style séparées.
+**Pourquoi :** les maquettes ne montrent que deux formats (393 et 1440 px), et seuls le
+header et la liste « Mes fichiers » changent vraiment de forme. 768 px correspond à une
+tablette en mode portrait, qui a déjà assez de place pour la version desktop.
+**Conséquence assumée :** la tablette n'est pas maquettée ; elle reçoit la version
+desktop.
