@@ -607,3 +607,21 @@ header et la liste « Mes fichiers » changent vraiment de forme. 768 px corresp
 tablette en mode portrait, qui a déjà assez de place pour la version desktop.
 **Conséquence assumée :** la tablette n'est pas maquettée ; elle reçoit la version
 desktop.
+
+---
+
+## 2026-10-09 — Inscription : redirection et messages d'erreur côté front
+
+**Décidé :** après un `201`, le front redirige vers `/login` ; la page de connexion
+(US04) confirme la création du compte. Les messages affichés sont écrits par le front
+d'après le **code HTTP** : `409` → « Cet email est déjà utilisé. », tout autre échec →
+message générique. Un second clic pendant l'envoi est ignoré.
+**Écarté :** un message de succès sur la page d'inscription (jeté à l'US04) ; afficher
+le `message` renvoyé par l'API.
+**Pourquoi :** le contrat ne renvoie pas de token, l'étape suivante est donc la
+connexion. Le `message` de l'API est en anglais et destiné au développeur ; le code
+HTTP suffit à choisir le texte pour l'utilisateur. Sans garde, un double clic
+enverrait deux requêtes, et la seconde afficherait « email déjà utilisé » pour un
+compte que l'on vient de créer.
+**Conséquence assumée :** tant que l'US04 n'existe pas, la redirection mène à une route
+inconnue (erreur en console).
