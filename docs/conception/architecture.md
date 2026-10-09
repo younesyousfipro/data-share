@@ -172,10 +172,30 @@ suit, une fois la route vérifiée.
 ### Front — par écran
 
 ```
-core/       auth.service, auth.interceptor (ajoute le JWT), auth.guard
-features/   auth/ (connexion, inscription) · upload/ · download/ · my-files/
-shared/     composants du design system : header, callout, bouton…
+styles.css    design tokens + classes partagées : .card, .field, .button-primary, .callout-error…
+app/
+  app.*       coquille commune : header, <router-outlet>, footer
+  core/       api.models, auth.service · plus tard auth.interceptor (ajoute le JWT), auth.guard
+  features/   auth/ (inscription, connexion) · upload/ · download/ · my-files/
+  shared/     composants réutilisés qui ont un comportement (header connecté, US04)
 ```
+
+Un élément **sans comportement** (bouton, champ, carte) est une classe CSS ; il ne
+devient un composant Angular que s'il porte de la logique.
+
+| Élément | Rôle | Équivalent back |
+|---|---|---|
+| `provideHttpClient()` (`app.config.ts`) | rend `HttpClient` injectable dans toute l'appli ; sans lui, erreur `NullInjectorError` au démarrage | — |
+| `core/api.models.ts` | interfaces TypeScript qui reprennent les schémas d'`openapi.yaml`. Effacées à la compilation : elles aident l'éditeur, mais **ne vérifient rien** à l'exécution | les DTO, sans `@Valid` |
+| `core/auth.service.ts` | `@Injectable({ providedIn: 'root' })` : une instance unique, créée par Angular à la première demande. Décrit l'appel HTTP et renvoie l'`Observable` de `HttpClient`, sans traiter les erreurs | un `@Service` |
+| page (`features/`) | s'abonne (`subscribe`) : déclenche la requête, puis choisit quoi afficher (succès, message d'erreur) | — |
+
+Le contrat est la référence commune : le DTO Java et l'interface TypeScript en
+découlent tous les deux, aucun ne copie l'autre.
+
+**Le service décrit l'appel ; la page le déclenche et décide quoi faire du
+résultat.** Un `Observable` ne part qu'à l'abonnement : sans `subscribe`, aucune
+requête n'est envoyée.
 
 ## Flux principaux
 

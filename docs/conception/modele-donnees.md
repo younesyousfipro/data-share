@@ -56,7 +56,7 @@ Le MPD (types et contraintes SQL) est le script Flyway `V1__init.sql`, détaill�
 | `size_bytes` | `2726297` | taille affichée (« 2,6 Mo »). Contrôlée à l'envoi : ≤ 1 Go. |
 | `password_hash` | `NULL` ou `$2a$10$…` | **vide** si le fichier n'est pas protégé. Sinon, empreinte du mot de passe exigé au téléchargement (US01, US02). |
 | `uploaded_at` | `2026-10-02 14:00` | date d'envoi, affichée dans l'historique (US05). |
-| `expires_at` | `2026-10-09 14:00` | date limite : envoi + 1 à 7 jours (défaut 7). Tout ce qui touche à l'expiration se déduit d'elle. |
+| `expires_at` | `2026-10-09 14:00` | date limite **choisie par l'utilisateur** à l'envoi (1 à 7 jours, défaut 7), calculée une fois puis figée. Le statut se déduit d'elle (voir « Une date calculée, mais stockée »). |
 
 ### Pourquoi le fichier est rangé sous son UUID et pas son nom
 
@@ -89,6 +89,28 @@ base (`original_name`) et est rendu au téléchargement.
 | statut actif · expire bientôt · expiré | comparaison `expires_at` / maintenant | elle changerait toute seule avec le temps : une colonne serait vite fausse |
 | fichier protégé (cadenas) | `password_hash` non vide | l'information est déjà là |
 | type de fichier | extension de `original_name` | idem |
+
+### Une date calculée, mais stockée : `expires_at`
+
+**Règle suivie :** ne pas stocker ce qui se recalcule à partir des autres colonnes, sinon
+deux sources de vérité finissent par diverger. Le statut ci-dessus en est l'exemple.
+
+`expires_at` est bien le résultat d'un calcul (envoi + durée choisie), mais **pas une
+redondance** : la durée choisie n'est stockée nulle part ailleurs. Le calcul est fait
+**une seule fois**, à l'envoi, puis figé. C'est la date promise au destinataire : ni le
+temps qui passe ni un changement de règle (7 jours max → 5) ne la modifient.
+
+| | Recalculé à chaque lecture | Calculé une fois, puis figé |
+|---|---|---|
+| Dépend de | l'heure actuelle ou une règle commune | un choix de l'utilisateur |
+| Exemple | le statut | `expires_at` |
+| Stocké ? | non, la valeur serait vite fausse | oui, c'est un engagement |
+
+**Écarté : stocker le nombre de jours** (`expiration_days`) et recalculer la date. Même
+comportement face à un changement de règle, et la saisie brute serait conservée ; mais
+le calcul serait refait à chaque usage (purge, téléchargement, historique), la purge ne
+pourrait plus s'appuyer sur un index, et une échéance autre qu'un nombre de jours
+(« 12 heures », « jusqu'au 15 ») exigerait de changer le schéma.
 
 
 ## MPD : le script `V1__init.sql`

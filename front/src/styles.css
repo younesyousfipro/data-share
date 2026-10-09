@@ -4,7 +4,8 @@
 /* Values extracted from the Figma mockups */
 :root {
   /* Brand */
-  --color-orange: #E27F29;           /* links, button text */
+  --color-orange: #E27F29;           /* mockup value, too light for text */
+  --color-orange-text: #A0561A;      /* links, button text: 4.5:1 contrast, see decisions.md */
   --color-orange-dark: #BA681F;      /* button text on light background */
   --color-orange-border: #FFA569;    /* secondary button border */
 
@@ -66,4 +67,90 @@ body {
   font-family: var(--font-family);
   font-size: var(--font-size-body);
   color: var(--color-black);
+}
+
+input,
+button {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-black);
+  outline-offset: 2px;
+}
+
+/* Shared building blocks, reused by every form screen */
+
+.card {
+  width: 100%;
+  max-width: 640px;
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
+}
+
+.card-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-title);
+  line-height: 40px;
+  text-align: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field input {
+  padding: var(--space-1-5) var(--space-2);
+  border: 1px solid var(--color-grey-border);
+  border-radius: var(--radius-field);
+  color: var(--color-black);
+}
+
+/* Mockup grey #B3B3B3 is only 2.1:1 on white */
+.field input::placeholder {
+  color: var(--color-grey-text);
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--color-error-text);
+}
+
+.field-error {
+  margin: 0;
+  font-size: var(--font-size-small);
+  color: var(--color-error-text);
+}
+
+.link {
+  color: var(--color-orange-text);
+  text-align: center;
+}
+
+.button-primary {
+  padding: var(--space-1-5);
+  border: 1px solid rgba(205, 94, 20, 0.5);
+  border-radius: var(--radius-field);
+  background: rgba(255, 129, 45, 0.13);
+  color: var(--color-orange-text);
+  cursor: pointer;
+}
+
+.callout-error {
+  margin: 0;
+  padding: var(--space-1);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-field);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  font-size: var(--font-size-small);
 }
