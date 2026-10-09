@@ -1,48 +1,52 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { NEVER, of, throwError } from 'rxjs';
 import { Mock } from 'vitest';
 import { AuthService } from '../../../core/auth.service';
-import { Register } from './register';
+import { Login } from './login';
 
-describe('Register', () => {
-  let fixture: ComponentFixture<Register>;
+describe('Login', () => {
+  let harness: RouterTestingHarness;
   let page: HTMLElement;
-  let register: Mock;
+  let login: Mock;
   let navigate: Mock;
 
-  beforeEach(async () => {
-    register = vi.fn().mockReturnValue(of(undefined));
+  beforeEach(() => {
+    login = vi.fn().mockReturnValue(of(undefined));
 
-    await TestBed.configureTestingModule({
-      imports: [Register],
-      providers: [provideRouter([]), { provide: AuthService, useValue: { register } }],
-    }).compileComponents();
-
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'login', component: Login }]),
+        { provide: AuthService, useValue: { login } },
+      ],
+    });
     navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    fixture = TestBed.createComponent(Register);
-    page = fixture.nativeElement;
-    await fixture.whenStable();
   });
+
+  // The page reads its URL when it is created, so each test opens its own URL
+  async function openPage(url = '/login'): Promise<void> {
+    harness = await RouterTestingHarness.create(url);
+    page = harness.routeNativeElement!;
+  }
 
   async function fillField(id: string, value: string): Promise<void> {
     const input = page.querySelector<HTMLInputElement>(`#${id}`)!;
     input.value = value;
     input.dispatchEvent(new Event('input'));
     input.dispatchEvent(new Event('blur'));
-    await fixture.whenStable();
+    await harness.fixture.whenStable();
   }
 
   async function submitForm(): Promise<void> {
     page.querySelector('form')!.dispatchEvent(new Event('submit'));
-    await fixture.whenStable();
+    await harness.fixture.whenStable();
   }
 
   async function fillValidForm(): Promise<void> {
     await fillField('email', ' marie@mail.fr ');
     await fillField('password', 's3cretPass');
-    await fillField('confirm-password', 's3cretPass');
   }
 
   function alertText(): string | null {
@@ -53,19 +57,32 @@ describe('Register', () => {
     return page.querySelector(`#${id}-error`)?.textContent?.trim() ?? null;
   }
 
-  it('should show no error before the user leaves a field', () => {
-    expect(page.querySelectorAll('.field-error').length).toBe(0);
+  function infoText(): string | null {
+    return page.querySelector('[role="status"]')?.textContent?.trim() ?? null;
+  }
+
+  it('should confirm the account creation when coming from the registration', async () => {
+    await openPage('/login?registered=true');
+
+    expect(infoText()).toBe('Votre compte a été créé, vous pouvez vous connecter.');
+  });
+
+  it('should show no information message on a direct visit', async () => {
+    await openPage();
+
+    expect(infoText()).toBeNull();
   });
 
   it('should show every missing field when submitting an empty form', async () => {
+    await openPage();
     await submitForm();
 
     expect(errorOf('email')).toBe('Saisissez votre email.');
-    expect(errorOf('password')).toBe('Saisissez un mot de passe.');
-    expect(errorOf('confirm-password')).toBe('Confirmez votre mot de passe.');
+    expect(errorOf('password')).toBe('Saisissez votre mot de passe.');
   });
 
   it('should reject a malformed email and link the error to the field', async () => {
+    await openPage();
     await fillField('email', 'marie.mail.fr');
 
     const input = page.querySelector('#email')!;
@@ -75,62 +92,51 @@ describe('Register', () => {
   });
 
   it('should trim spaces around the email', async () => {
+    await openPage();
     await fillField('email', '  marie@mail.fr ');
 
     expect(page.querySelector<HTMLInputElement>('#email')!.value).toBe('marie@mail.fr');
     expect(errorOf('email')).toBeNull();
   });
 
-  it.each(['1234567', '1234567890123456789'])(
-    'should reject the password "%s", outside 8 to 18 characters',
-    async (password) => {
-      await fillField('password', password);
-
-      expect(errorOf('password')).toBe('Le mot de passe doit contenir entre 8 et 18 caractères.');
-    },
-  );
-
-  it('should reject a confirmation that differs from the password', async () => {
-    await fillField('password', 's3cretPass');
-    await fillField('confirm-password', 's3cretPasz');
-
-    expect(errorOf('confirm-password')).toBe('Les mots de passe ne correspondent pas.');
-  });
-
-  it('should show no error when every field is valid', async () => {
+  it('should accept any non-empty password, its length being checked at registration', async () => {
+    await openPage();
     await fillField('email', 'marie@mail.fr');
-    await fillField('password', 's3cretPass');
-    await fillField('confirm-password', 's3cretPass');
+    await fillField('password', 'short');
     await submitForm();
 
     expect(page.querySelectorAll('.field-error').length).toBe(0);
   });
 
   it('should not call the API when the form is invalid', async () => {
+    await openPage();
     await submitForm();
 
-    expect(register).not.toHaveBeenCalled();
+    expect(login).not.toHaveBeenCalled();
   });
 
-  it('should send the trimmed email and the password only, then go to the login page', async () => {
+  it('should send the trimmed email and the password, then go to the home page', async () => {
+    await openPage();
     await fillValidForm();
     await submitForm();
 
-    expect(register).toHaveBeenCalledWith({ email: 'marie@mail.fr', password: 's3cretPass' });
-    expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { registered: true } });
+    expect(login).toHaveBeenCalledWith({ email: 'marie@mail.fr', password: 's3cretPass' });
+    expect(navigate).toHaveBeenCalledWith(['/']);
   });
 
-  it('should announce that the email is already used on a 409', async () => {
-    register.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+  it('should announce wrong credentials on a 401', async () => {
+    login.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
+    await openPage();
     await fillValidForm();
     await submitForm();
 
-    expect(alertText()).toBe('Cet email est déjà utilisé.');
+    expect(alertText()).toBe('Email ou mot de passe incorrect.');
     expect(navigate).not.toHaveBeenCalled();
   });
 
   it('should show a generic message on any other server error', async () => {
-    register.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    login.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    await openPage();
     await fillValidForm();
     await submitForm();
 
@@ -138,11 +144,12 @@ describe('Register', () => {
   });
 
   it('should send a single request on a double click', async () => {
-    register.mockReturnValue(NEVER);
+    login.mockReturnValue(NEVER);
+    await openPage();
     await fillValidForm();
     await submitForm();
     await submitForm();
 
-    expect(register).toHaveBeenCalledTimes(1);
+    expect(login).toHaveBeenCalledTimes(1);
   });
 });

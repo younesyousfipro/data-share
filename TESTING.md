@@ -64,7 +64,7 @@ commande échoue (décision du 2026-10-07).
 | `AuthServiceTest` | unitaire | email enregistré en minuscules et mot de passe haché · email déjà pris refusé sans enregistrement · email pris par une inscription simultanée (contrainte d'unicité) |
 | `AuthControllerTest` | intégration | `201` et hash BCrypt en base · `409` même avec une casse différente, au format `ErrorDetailsDTO` · `400` : email invalide, email entouré d'espaces, mot de passe trop court (sans renvoyer la valeur), mot de passe de plus de 18 caractères, JSON mal formé |
 | `auth.service.spec.ts` (front) | unitaire | `POST /api/auth/register` avec l'email et le mot de passe |
-| `register.spec.ts` (front) | unitaire | aucune erreur avant de quitter un champ · formulaire vide : trois erreurs · email mal formé, erreur reliée au champ (`aria-invalid`, `aria-describedby`) · espaces retirés de l'email · mot de passe hors 8 à 18 caractères · confirmation différente · aucun appel si le formulaire est invalide · envoi de l'email et du mot de passe seuls, puis redirection vers `/login` · `409` : « email déjà utilisé » · autre erreur : message générique · double clic : une seule requête |
+| `register.spec.ts` (front) | unitaire | aucune erreur avant de quitter un champ · formulaire vide : trois erreurs · email mal formé, erreur reliée au champ (`aria-invalid`, `aria-describedby`) · espaces retirés de l'email · mot de passe hors 8 à 18 caractères · confirmation différente · aucun appel si le formulaire est invalide · envoi de l'email et du mot de passe seuls, puis redirection vers `/login?registered=true` · `409` : « email déjà utilisé » · autre erreur : message générique · double clic : une seule requête |
 
 ### US04 — Connexion
 
@@ -73,6 +73,9 @@ commande échoue (décision du 2026-10-07).
 | `JwtServiceTest` | unitaire | jeton relu avec la même clé : `sub` = identifiant du compte, expiration 1 heure après l'émission |
 | `AuthServiceTest` | unitaire | jeton renvoyé quelle que soit la casse de l'email · email inconnu et mot de passe faux refusés, sans émettre de jeton |
 | `AuthControllerTest` | intégration | `200` + jeton · `401` au même message pour email inconnu et mot de passe faux · `401` (et non `500`) pour un mot de passe de plus de 72 octets, limite de BCrypt · `400` email invalide |
+| `auth.service.spec.ts` (front) | unitaire | `POST /api/auth/login` : jeton enregistré, `isLoggedIn` vrai · `401` : rien n'est enregistré · jeton déjà présent au démarrage : connecté |
+| `login.spec.ts` (front) | unitaire | message « compte créé » seulement avec `?registered=true` · formulaire vide : deux erreurs · email mal formé, erreur reliée au champ · espaces retirés de l'email · mot de passe court accepté (longueur contrôlée à l'inscription) · aucun appel si le formulaire est invalide · envoi puis redirection vers `/` · `401` : « email ou mot de passe incorrect » · autre erreur : message générique · double clic : une seule requête |
+| `header.spec.ts` (front) | unitaire | « Se connecter » vers `/login` si déconnecté · bascule sur « Mon espace » dès la connexion, sans recréer le composant |
 
 Les tests reçoivent une clé JWT factice par la configuration Maven (Surefire) : ils
 tournent sans `.env`.

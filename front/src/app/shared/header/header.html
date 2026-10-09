@@ -1,0 +1,8 @@
+<header class="header">
+  <a class="logo" routerLink="/">DataShare</a>
+  @if (isLoggedIn()) {
+    <a class="header-button" routerLink="/my-files">Mon espace</a>
+  } @else {
+    <a class="header-button" routerLink="/login">Se connecter</a>
+  }
+</header>

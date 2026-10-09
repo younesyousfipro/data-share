@@ -1,0 +1,48 @@
+<section class="card" aria-labelledby="login-title">
+  <h1 id="login-title" class="card-title">Connexion</h1>
+
+  <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+    @if (accountCreated) {
+      <p class="callout-info" role="status">Votre compte a été créé, vous pouvez vous connecter.</p>
+    }
+    @if (serverError(); as error) {
+      <p class="callout-error" role="alert">{{ error }}</p>
+    }
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input
+        id="email"
+        type="email"
+        formControlName="email"
+        autocomplete="email"
+        placeholder="Saisissez votre email..."
+        (blur)="trimEmail()"
+        [attr.aria-invalid]="emailError() !== null"
+        [attr.aria-describedby]="emailError() ? 'email-error' : null"
+      />
+      @if (emailError(); as error) {
+        <p id="email-error" class="field-error">{{ error }}</p>
+      }
+    </div>
+
+    <div class="field">
+      <label for="password">Mot de passe</label>
+      <input
+        id="password"
+        type="password"
+        formControlName="password"
+        autocomplete="current-password"
+        placeholder="Saisissez votre mot de passe..."
+        [attr.aria-invalid]="passwordError() !== null"
+        [attr.aria-describedby]="passwordError() ? 'password-error' : null"
+      />
+      @if (passwordError(); as error) {
+        <p id="password-error" class="field-error">{{ error }}</p>
+      }
+    </div>
+
+    <a class="link" routerLink="/register">Créer un compte</a>
+    <button class="button-primary" type="submit">Connexion</button>
+  </form>
+</section>
