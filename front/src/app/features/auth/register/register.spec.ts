@@ -117,7 +117,7 @@ describe('Register', () => {
     await submitForm();
 
     expect(register).toHaveBeenCalledWith({ email: 'marie@mail.fr', password: 's3cretPass' });
-    expect(navigate).toHaveBeenCalledWith(['/login']);
+    expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { registered: true } });
   });
 
   it('should announce that the email is already used on a 409', async () => {
