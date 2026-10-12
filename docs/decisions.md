@@ -695,7 +695,8 @@ d'après le code HTTP : `401` → « Email ou mot de passe incorrect. », tout a
 **Pourquoi :** l'accueil est l'écran de dépôt (US01) et n'a pas sa place ici. Pour les
 messages, même règle qu'à l'inscription.
 **Conséquence assumée :** jusqu'à l'US01, une connexion réussie ramène au formulaire ;
-seul le header (« Mon espace ») montre qu'elle a fonctionné.
+seul le header (« Mon espace ») montre qu'elle a fonctionné. *(Levée le 2026-10-12 :
+`/` est désormais la page d'upload.)*
 
 ---
 
@@ -792,3 +793,94 @@ front ne lit que le code `401`. Simplifier prime sur la cohérence de format pou
 corps que personne ne lit.
 **Conséquence assumée :** un client qui teste à la main (`curl`, Postman) reçoit un
 `401` sans message ; la raison figure dans l'en-tête `WWW-Authenticate`.
+
+---
+
+## 2026-10-12 — Upload : expiration de 1 à 7 jours, 7 par défaut
+
+**Décidé :** liste déroulante de 1 à 7 jours, « 7 jours » présélectionné.
+**Écarté :** « Une journée » présélectionnée, comme sur la maquette.
+**Pourquoi :** la spec (US01) et le contrat fixent 7 jours par défaut ; la maquette se
+contredit elle-même (« Une journée » dans le formulaire, « une semaine » dans le message
+de confirmation). Le front garde ainsi le même défaut que l'API.
+**Conséquence assumée :** écart à la maquette sur la valeur présélectionnée.
+
+---
+
+## 2026-10-12 — Accueil réservé aux utilisateurs connectés
+
+**Décidé :** la page d'accueil (`/`), qui est la page d'upload, est protégée par un
+guard : sans jeton, on arrive sur `/login`, et la connexion renvoie vers `/`.
+**Écarté :** un accueil public, comme sur la maquette, qui envoie vers la connexion au
+clic sur le bouton d'upload.
+**Pourquoi :** l'upload exige un compte (US01). Avec un accueil public, le fichier choisi
+serait perdu au passage par `/login`, ou il faudrait le conserver quelque part : de la
+complexité pour un écran qui n'apporte rien sans compte.
+**Conséquence assumée :** l'écran « accueil déconnecté » des maquettes n'existe pas ; un
+visiteur sans compte voit directement la connexion.
+
+---
+
+## 2026-10-12 — Icônes : SVG de Lucide écrits dans le HTML
+
+**Décidé :** les icônes (celles de Lucide, la bibliothèque des maquettes) sont copiées en
+`<svg>` directement dans les templates, avec `stroke="currentColor"` : elles prennent la
+couleur du texte qui les entoure.
+**Écarté :** la dépendance `lucide-angular` ; des fichiers `.svg` affichés par `<img>`.
+**Pourquoi :** quelques icônes par écran ne justifient pas une dépendance de plus (à
+suivre à chaque montée de version d'Angular). Une `<img>` ne peut pas hériter de la
+couleur du texte : il faudrait un fichier par couleur.
+**Conséquence assumée :** le tracé d'une icône est recopié là où elle sert. À
+reconsidérer si l'historique (US05) en multiplie le nombre.
+
+---
+
+## 2026-10-12 — Tailles affichées en unités binaires, à la française
+
+**Décidé :** un pipe `fileSize` affiche les tailles en o, Ko, Mo, Go, par paliers de
+1024, avec une décimale (« 2,6 Mo »).
+**Écarté :** paliers de 1000 (unités décimales).
+**Pourquoi :** la limite d'1 Go de l'API est binaire (`1GB` de Spring = 1024³ octets) :
+un fichier de 1 073 741 824 octets s'affiche « 1 Go » et passe, cohérent avec le refus.
+L'exemple de la maquette (2 726 297 octets → « 2,6 Mo ») suit le même calcul.
+**Conséquence assumée :** les « Mo » affichés diffèrent légèrement de ceux de certains
+explorateurs de fichiers (macOS compte par 1000).
+
+---
+
+## 2026-10-12 — Upload : pas de barre de progression
+
+**Décidé :** pendant l'envoi, le bouton « Téléverser » est désactivé et un message
+« Envoi en cours, ne ferme pas cette page… » s'affiche (annoncé aux lecteurs d'écran,
+`role="status"`).
+**Écarté :** une barre de progression (`HttpClient` avec `reportProgress`).
+**Pourquoi :** aucune maquette ne prévoit d'état de chargement ; le message suffit à
+signaler que l'envoi est en cours et empêche un second envoi.
+**Conséquence assumée :** pour un gros fichier, l'utilisateur ne sait pas combien de
+temps attendre. Voir `perspectives.md`.
+
+---
+
+## 2026-10-12 — Upload : messages d'erreur côté front
+
+**Décidé :** messages choisis d'après le code HTTP, comme à l'inscription et à la
+connexion : `413` → limite d'1 Go, `400` → fichier refusé (nom ou type), tout autre
+échec → message générique. Le `401` n'a pas de message : l'intercepteur a déjà renvoyé
+vers `/login`. Le mot de passe du fichier suit la règle de l'API (vide, ou 6 à 18
+caractères).
+**Écarté :** afficher le `message` de l'API (en anglais, écrit pour le développeur).
+**Pourquoi :** même règle qu'aux écrans précédents. Le front vérifiant déjà taille,
+extension et mot de passe, un `400` ne survient qu'avec un nom invalide ou une requête
+forgée.
+**Conséquence assumée :** un `400` ne dit pas quelle règle a été enfreinte.
+
+---
+
+## 2026-10-12 — Upload : lien « Envoyer un autre fichier »
+
+**Décidé :** l'écran « lien généré » ajoute un bouton discret (style *Tertiary* du
+design system) qui ramène à l'accueil avec un formulaire vierge.
+**Écarté :** s'en tenir à la maquette, qui ne prévoit aucune suite.
+**Pourquoi :** sans lui, le parcours se termine en impasse : le logo mène à `/`, la page
+déjà affichée, et il faudrait recharger la page pour envoyer un second fichier.
+**Conséquence assumée :** écart à la maquette, ajout d'un élément absent du design.

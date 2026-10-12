@@ -243,9 +243,9 @@ suit, une fois la route vérifiée.
 styles.css    design tokens + classes partagées : .card, .field, .button-primary, .callout-error, .callout-info…
 app/
   app.*       coquille commune : <app-header>, <router-outlet>, footer
-  core/       api.models, auth.service · plus tard auth.interceptor (ajoute le JWT), auth.guard
+  core/       api.models, auth.service, file.service, auth.interceptor (ajoute le JWT), auth.guard (réserve une page aux connectés)
   features/   auth/ (register/, login/) · upload/ · download/ · my-files/
-  shared/     composants réutilisés qui ont un comportement : header/ (« Se connecter » ou « Mon espace »)
+  shared/     ce que plusieurs écrans réutilisent : header/ (« Se connecter » ou « Mon espace ») · file-size.pipe (« 2,6 Mo »)
 ```
 
 Un élément **sans comportement** (bouton, champ, carte) est une classe CSS ; il ne
@@ -267,8 +267,8 @@ requête n'est envoyée.
 
 #### État de connexion (US04)
 
-`AuthService` est le seul à connaître le jeton. Les pages et le header ne voient que
-`isLoggedIn`.
+`AuthService` est le seul à stocker le jeton. Les pages et le header ne voient que
+`isLoggedIn` ; l'intercepteur le lit (`getToken()`) pour l'envoyer à l'API.
 
 ```
 login() ──200──► tap : jeton dans localStorage + signal token ──► isLoggedIn (computed) ──► header : « Mon espace »
@@ -280,9 +280,36 @@ login() ──200──► tap : jeton dans localStorage + signal token ──�
 | `localStorage` | oui | non |
 | signal `token` | non | oui : le header se met à jour sans rechargement |
 
-Le signal démarre avec la valeur de `localStorage` ; `login()` met à jour les deux.
-« Connecté » signifie « un jeton est présent » : sa validité reste jugée par l'API
-(décision du 2026-10-09).
+Le signal démarre avec la valeur de `localStorage` ; `login()` et `logout()` mettent à
+jour les deux. « Connecté » signifie « un jeton est présent » : sa validité reste jugée
+par l'API (décision du 2026-10-09).
+
+#### Intercepteur : le jeton ajouté à chaque appel (US01)
+
+`auth.interceptor.ts` voit passer **toutes** les requêtes de `HttpClient` : aucun
+service n'ajoute le jeton lui-même.
+
+| Requête | Ce que fait l'intercepteur |
+|---|---|
+| `/api/auth/**`, `/api/download/**` (publiques) | rien : un jeton expiré envoyé là ferait répondre `401` par Spring, qui vérifie tout jeton reçu |
+| toute autre route `/api` | ajoute `Authorization: Bearer <jeton>` s'il y en a un |
+| réponse `401` d'une route protégée | `logout()`, puis redirection vers `/login` ; l'erreur continue jusqu'à la page |
+
+Le `401` de `/api/auth/login` (identifiants refusés) n'est pas intercepté : c'est la page
+de connexion qui l'affiche.
+
+#### Guard : une page réservée aux connectés (US01)
+
+`auth.guard.ts` est consulté par le routeur **avant** d'afficher une page qui le déclare
+(`canActivate` dans `app.routes.ts`) : sans jeton, il renvoie vers `/login`. Il ne
+protège rien côté serveur — l'API refuse de toute façon l'appel sans jeton valide —, il
+évite seulement d'afficher un écran inutilisable. **Le guard décide de l'affichage,
+l'API décide de l'accès.**
+
+| Situation | Qui réagit |
+|---|---|
+| pas de jeton, ouverture de `/` | le guard, avant l'affichage |
+| jeton expiré, ouverture de `/` | personne : le guard ne lit pas l'expiration (décision du 2026-10-09) ; l'intercepteur réagit au premier appel refusé (`401`) |
 
 ## Flux principaux
 
@@ -439,6 +466,8 @@ Content-Disposition: form-data; name="expirationDays"
 
 | Étape | Qui |
 |---|---|
+| construire les parties ; **omettre** `password` s'il est vide (un `""` serait refusé : 6 caractères minimum) | `FileService` (front), avec `FormData` |
+| écrire l'en-tête `Content-Type` avec sa frontière | le navigateur : le fixer à la main ferait perdre la frontière |
 | découper les parties, écrire le fichier dans un dossier temporaire, refuser au-delà de 1 Go (`413`) | Tomcat et Spring (`application.properties`) |
 | emballer la partie `file` dans un `MultipartFile` | Spring |
 | remplir `UploadRequestDTO` **par nom de partie** | `@ModelAttribute` (et non `@RequestBody`, qui lit un seul corps JSON) |
