@@ -41,6 +41,9 @@ Pour en générer une, ou pour l'ajouter à un `.env` créé avant l'US04 (depui
 echo "JWT_SECRET=$(openssl rand -base64 32)" >> .env
 ```
 
+**Fichiers déposés** : rangés dans `back/uploads/` (non versionné), chacun sous le nom de
+son UUID. Autre dossier possible avec `STORAGE_DIRECTORY` dans `.env`.
+
 ### Lancement
 
 ```bash
@@ -48,11 +51,13 @@ echo "JWT_SECRET=$(openssl rand -base64 32)" >> .env
 ```
 
 Au démarrage, Spring lance le conteneur PostgreSQL, puis Flyway crée les tables
-(scripts dans `src/main/resources/db/migration`). L'API écoute sur le port 8080.
+(scripts dans `src/main/resources/db/migration`) et le dossier des fichiers déposés est
+créé s'il manque. L'API écoute sur le port 8080.
 
 Vérification : http://localhost:8080/actuator/health doit répondre `{"status":"UP"}`.
 
-`Ctrl+C` arrête l'API et le conteneur ; les données sont conservées.
+`Ctrl+C` arrête l'API et le conteneur ; les données sont conservées. Le code modifié
+n'est pris en compte qu'au lancement suivant.
 
 ### Tests
 
@@ -159,7 +164,28 @@ curl -i -X POST http://localhost:8080/api/auth/login \
 | `400` | email invalide ou champ vide |
 | `401` | email inconnu ou mot de passe faux (même message dans les deux cas) |
 
-Les erreurs ont toutes le même format JSON (`timestamp`, `message`, `details`).
+Déposer un fichier (US01), avec le jeton obtenu :
+
+```bash
+TOKEN=eyJ...   # valeur de "token" dans la réponse de /login
+curl -i http://localhost:8080/api/files \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@README.md" \
+  -F "password=s3cret" \
+  -F "expirationDays=3"
+```
+
+`password` et `expirationDays` sont facultatifs (pas de mot de passe, 7 jours).
+
+| Code | Signification |
+|---|---|
+| `201` | fiche du fichier : `id` (le lien de partage), dates, statut, protégé ou non |
+| `400` | extension interdite, nom invalide, mot de passe hors 6 à 18 caractères, durée hors 1 à 7 jours, fichier absent |
+| `401` | jeton absent, falsifié ou expiré (corps vide) |
+| `413` | fichier de plus de 1 Go |
+
+Les erreurs ont toutes le même format JSON (`timestamp`, `message`, `details`), sauf le
+`401` des routes protégées, à corps vide.
 
 Toutes les routes sont décrites dans
 [`docs/conception/openapi.yaml`](docs/conception/openapi.yaml). Avec **Postman** :
