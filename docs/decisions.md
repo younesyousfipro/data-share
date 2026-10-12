@@ -309,7 +309,7 @@ renomme facilement ; une vraie protection passerait par un antivirus côté serv
 ## 2026-10-07 — Versions de la stack : dernières stables
 
 **Décidé :** Java **25** (LTS) · Spring Boot **4.1** (fixe Spring Security 7.1, Jackson 3.1,
-Flyway 12.4, Testcontainers 2.0, Lombok) · MapStruct 1.6.3 · JaCoCo 0.8.15 · PostgreSQL
+Flyway 12.4, Testcontainers 2.0, Lombok) · ~~MapStruct 1.6.3~~ *(abandonné le 2026-10-09)* · JaCoCo 0.8.15 · PostgreSQL
 **18** · Angular **22** (TypeScript 6.0) · Node **24** (LTS) · Vitest 5 *(Jest 30 à
 l'origine, révisé le 2026-10-07)* · Cypress 16 · k6 2.
 Relevé le 2026-10-03 sur start.spring.io, Maven Central, npm et endoflife.date.
@@ -322,7 +322,7 @@ Relevé le 2026-10-03 sur start.spring.io, Maven Central, npm et endoflife.date.
 sans modification.
 *(Révisé le 2026-10-07 : package renommé `io.github.younesyousfipro.datashare`, voir
 « Package de base ».)* On n'y met que les dépendances du socle ; les autres arrivent avec
-le code qui les utilise (sécurité, JWT, Lombok, MapStruct à l'étape 3 ; *révisé le 2026-10-07 : MapStruct arrive avec US01/US05, US03 n'ayant rien à convertir*).
+le code qui les utilise (sécurité, JWT, Lombok, MapStruct à l'étape 3 ; *révisé le 2026-10-07 : MapStruct arrive avec US01/US05, US03 n'ayant rien à convertir ; abandonné le 2026-10-09, voir « Conversion entité → DTO écrite à la main »*).
 
 ```bash
 curl https://start.spring.io/starter.zip -o back.zip \
@@ -681,7 +681,7 @@ protégées (`JwtDecoder`, `.oauth2ResourceServer(...)`) arrive avec l'US01.
 **Pourquoi :** aucune route protégée n'existe encore ; la vérification ne serait ni
 utilisée ni testable.
 **Conséquence assumée :** entre l'US04 et l'US01, un jeton est émis sans qu'aucune route
-ne le demande.
+ne le demande. *(Fait le 2026-10-12 avec `POST /api/files`.)*
 
 ---
 
@@ -722,3 +722,73 @@ dupliquerait cette vérification sans rien sécuriser.
 « Mon espace » alors que le jeton a expiré. Corrigé à l'US01 : l'intercepteur traitera
 le `401` (il efface le jeton et redirige vers `/login`). La déconnexion volontaire
 arrive avec « Mon espace » (US05).
+
+---
+
+## 2026-10-09 — Conversion entité → DTO écrite à la main
+
+**Décidé :** `FileMapper`, une classe Spring écrite à la main, convertit `SharedFile`
+en DTO. MapStruct n'est pas ajouté.
+**Écarté :** MapStruct, prévu le 2026-10-07.
+**Pourquoi :** seulement deux conversions (`FileResponse`, `FileMetadataResponse`), et
+les champs qui comptent sont **calculés** : `status` à partir de l'heure courante,
+`passwordProtected` à partir du hash. Avec MapStruct, ils passeraient par des
+`expression = "java(...)"` dans des annotations, moins lisibles et moins testables
+qu'une méthode, pour une dépendance de plus.
+**Conséquence assumée :** chaque nouveau champ se recopie à la main dans le mapper.
+
+---
+
+## 2026-10-09 — Propriétaire d'un fichier : `accountId`, sans relation JPA
+
+**Décidé :** l'entité `SharedFile` porte un simple `Long accountId`.
+**Écarté :** `@ManyToOne Account`.
+**Pourquoi :** le code ne passe jamais d'un fichier à son compte : l'historique (US05)
+filtre seulement par `account_id`. La clé étrangère `fk_shared_file_account` garantit
+déjà la cohérence en base. On évite le chargement paresseux d'`Account`, source
+d'erreurs avec `open-in-view=false`.
+**Conséquence assumée :** le lien entre les deux tables n'apparaît pas dans les
+entités Java ; il faut lire le schéma SQL pour le voir.
+
+---
+
+## 2026-10-09 — `401` des routes protégées au format `ErrorDetails` *(abandonné le 2026-10-12)*
+
+**Décidé :** un `AuthenticationEntryPoint` écrit le `401` (jeton absent, invalide ou
+expiré) au même format que les autres erreurs.
+**Écarté :** le comportement par défaut de Spring (corps vide) ; modifier le contrat
+pour l'autoriser.
+**Pourquoi :** le contrat promet un seul format, « y compris pour les erreurs techniques
+de Spring ». Ce `401` est levé par un filtre de sécurité, avant tout controller :
+`RestExceptionHandler` ne le voit jamais, d'où ce composant à part.
+**Conséquence assumée :** le format d'erreur est produit à deux endroits.
+
+---
+
+## 2026-10-09 — Extensions interdites contrôlées dans `FileService`
+
+**Décidé :** le service vérifie l'extension et lève une exception métier, traduite en
+`400`. Les autres règles (mot de passe, durée) restent des annotations du DTO.
+*(Complété le 2026-10-12 : le service refuse aussi un nom vide ou de plus de 255
+caractères, la taille de `original_name` ; sans ce contrôle, une requête forgée à la
+main finissait en `500` à l'insertion. Une seule exception, `InvalidFileException`,
+porte les deux refus.)*
+**Écarté :** une annotation de validation sur mesure (`@AllowedExtension`).
+**Pourquoi :** même raison que pour `@MaxBytes` (2026-10-08) : pas de mécanique de
+validation sur mesure dans le prototype. La liste des extensions est une règle métier,
+à sa place dans le service.
+**Conséquence assumée :** la validation serveur est répartie entre le DTO et le service.
+
+---
+
+## 2026-10-12 — `401` des routes protégées : comportement par défaut de Spring
+
+**Décidé :** jeton absent, falsifié ou expiré → `401` à corps vide, avec l'en-tête
+standard `WWW-Authenticate: Bearer`, tel que Spring Security le produit. Seule exception
+au format d'erreur unique, notée dans le contrat.
+**Écarté :** `RestAuthenticationEntryPoint` (décision du 2026-10-09), écrit puis retiré.
+**Pourquoi :** il ne protège rien de plus (mêmes requêtes refusées, même code) et le
+front ne lit que le code `401`. Simplifier prime sur la cohérence de format pour un
+corps que personne ne lit.
+**Conséquence assumée :** un client qui teste à la main (`curl`, Postman) reçoit un
+`401` sans message ; la raison figure dans l'en-tête `WWW-Authenticate`.
