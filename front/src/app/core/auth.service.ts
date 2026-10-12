@@ -13,6 +13,10 @@ export class AuthService {
 
   readonly isLoggedIn = computed(() => this.token() !== null);
 
+  getToken(): string | null {
+    return this.token();
+  }
+
   register(request: RegisterRequest): Observable<void> {
     return this.http.post<void>('/api/auth/register', request);
   }
@@ -25,5 +29,10 @@ export class AuthService {
       }),
       map(() => undefined),
     );
+  }
+
+  logout(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    this.token.set(null);
   }
 }

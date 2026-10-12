@@ -67,4 +67,15 @@ describe('AuthService', () => {
 
     expect(service.isLoggedIn()).toBe(true);
   });
+
+  it('logout should forget the stored token', () => {
+    localStorage.setItem('token', 'header.payload.signature');
+    const service = TestBed.inject(AuthService);
+
+    service.logout();
+
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(service.getToken()).toBeNull();
+    expect(service.isLoggedIn()).toBe(false);
+  });
 });
