@@ -28,6 +28,11 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorDetails(e.getMessage(), request));
 	}
 
+	@ExceptionHandler(InvalidFileException.class)
+	public ResponseEntity<ErrorDetailsDTO> handleInvalidFile(InvalidFileException e, WebRequest request) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorDetails(e.getMessage(), request));
+	}
+
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorDetailsDTO> handleUnexpected(Exception e, WebRequest request) {
 		logger.error("Unexpected error on " + request.getDescription(false), e);
@@ -46,7 +51,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 		return ResponseEntity.status(status).body(errorDetails(message, request));
 	}
 
-	// Other Spring MVC errors (malformed JSON, unknown route...) keep their status, in our format
+	// Other Spring MVC errors (malformed JSON, unknown route, file over 1 GB...) keep their status, in our format
 	@Override
 	protected ResponseEntity<Object> handleExceptionInternal(Exception e, Object body, HttpHeaders headers,
 			HttpStatusCode status, WebRequest request) {

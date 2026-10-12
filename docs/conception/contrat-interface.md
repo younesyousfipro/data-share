@@ -20,7 +20,7 @@ extension VS Code *OpenAPI (Swagger) Editor*, ou [editor.swagger.io](https://edi
 
 **Accès par préfixe** — `/api/auth/**` et `/api/download/**` sont publics,
 `/api/files/**` exige `Authorization: Bearer <JWT>`. Le compte est toujours lu dans
-le JWT (sujet = email), jamais dans un paramètre.
+le JWT (sujet = identifiant du compte), jamais dans un paramètre.
 
 **Format des erreurs** — le même pour toutes les routes :
 
@@ -33,7 +33,9 @@ le JWT (sujet = email), jamais dans un paramètre.
 ```
 
 Y compris pour les erreurs techniques de Spring (JSON mal formé, route inconnue), qui
-gardent leur code mais prennent ce format. Le front lit donc toujours `message`, sans
+gardent leur code mais prennent ce format. **Seule exception** : le `401` d'une route
+protégée (jeton absent, falsifié ou expiré) a un corps vide et l'en-tête standard
+`WWW-Authenticate: Bearer` ; le front ne lit que son code. Le front lit donc toujours `message`, sans
 se demander d'où vient l'erreur. Les erreurs de validation citent les champs refusés,
 jamais la valeur saisie.
 
@@ -55,14 +57,16 @@ jamais la valeur saisie.
 |---|---|
 | email | format valide, 254 caractères maximum, unique, casse ignorée (enregistré en minuscules) |
 | mot de passe du compte | 8 à 18 caractères (18 × 4 octets au pire = 72, la limite de BCrypt) |
-| fichier | 1 Go maximum · extensions refusées : `exe`, `bat`, `cmd`, `com`, `msi`, `sh`, `ps1`, `vbs`, `jar` (casse ignorée, dernière extension seule) |
-| mot de passe du fichier | optionnel, 6 caractères minimum |
+| fichier | 1 Go maximum · nom obligatoire, 255 caractères maximum · extensions refusées : `exe`, `bat`, `cmd`, `com`, `msi`, `sh`, `ps1`, `vbs`, `jar` (casse ignorée, dernière extension seule) |
+| mot de passe du fichier | optionnel, 6 à 18 caractères (même limite BCrypt que le compte) |
 | `expirationDays` | entier de 1 à 7, défaut 7 |
 
 ## Structures de données
 
 Noms des schémas OpenAPI. Côté Java, la classe porte le suffixe `DTO`
 (`RegisterRequest` → `RegisterRequestDTO`).
+Exception : `FileStatus`, une énumération (le type du champ `status`, jamais
+envoyée seule), garde son nom.
 
 | DTO | Champs | Utilisé par |
 |---|---|---|

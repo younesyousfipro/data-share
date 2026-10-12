@@ -8,6 +8,7 @@ mise en production. Chaque ligne renvoie à la décision qui en donne le context
 |---|---|---|---|
 | **Reverse proxy** : HTTPS, front et API sous un même domaine | toute mise en ligne | proxy de dev Angular, HTTP | Dev : proxy Angular plutôt que CORS |
 | **Stockage objet** (S3, Azure Blob) : nouvelle implémentation de `FileStorage` | plusieurs instances du back, besoin de redondance | dossier local du poste | Stockage des fichiers |
+| **Upload direct vers le stockage objet** (URL d'envoi signée) : le navigateur envoie le fichier au stockage, l'API ne reçoit que la demande | fichiers lourds, nombreux uploads simultanés | chaque fichier traverse l'API (mémoire, disque, bande passante) | Stockage des fichiers |
 | **Volume Docker** pour les fichiers | back livré en conteneur | back hors Docker | Stockage des fichiers |
 | **Purge sortie de l'API** : règle de cycle de vie du stockage objet, ou tâche planifiée indépendante | plusieurs instances du back, ou stockage objet | `@Scheduled` dans le back | US10 partielle |
 | **Rétention des métadonnées** : effacer la fiche après une durée fixée | volume de fiches expirées en hausse | fiches conservées sans limite | US10 partielle |

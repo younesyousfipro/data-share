@@ -225,7 +225,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Signed HS256, subject = account email.
+      description: Signed HS256, subject = account id.
 
   parameters:
     FileId:
@@ -246,11 +246,14 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorDetails'
     Unauthorized:
-      description: Missing, invalid or expired JWT
-      content:
-        application/json:
+      description: |
+        Missing, invalid or expired JWT. Empty body: the request is rejected by
+        the security filter, before any controller.
+      headers:
+        WWW-Authenticate:
+          description: 'Standard bearer challenge (RFC 6750), e.g. `Bearer error="invalid_token"`'
           schema:
-            $ref: '#/components/schemas/ErrorDetails'
+            type: string
     NotFound:
       description: Unknown file, or file owned by another account
       content:
@@ -303,7 +306,7 @@ components:
         token:
           type: string
           description: 'JWT to send as `Authorization: Bearer <token>`'
-          example: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtYXJpZUBtYWlsLmZyIn0.sig
+          example: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0MiJ9.sig
 
     UploadRequest:
       type: object
@@ -313,13 +316,17 @@ components:
           type: string
           format: binary
           description: |
-            1 GB max. Forbidden extensions (case-insensitive, last extension
+            1 GB max. Name required, 255 characters max. Forbidden extensions (case-insensitive, last extension
             only, so `invoice.pdf.exe` is rejected): exe, bat, cmd, com, msi,
             sh, ps1, vbs, jar. A file without extension is accepted.
         password:
           type: string
           minLength: 6
-          description: Optional. Required at download time when set.
+          maxLength: 18
+          description: |
+            Optional. Required at download time when set.
+            18: even at 4 bytes per character, stays within the 72-byte input
+            limit of BCrypt.
         expirationDays:
           type: integer
           minimum: 1
