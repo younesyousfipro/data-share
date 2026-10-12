@@ -13,3 +13,21 @@ export interface LoginRequest {
 export interface LoginResponse {
   token: string;
 }
+
+export interface UploadRequest {
+  file: File;
+  password: string;
+  expirationDays: number;
+}
+
+export type FileStatus = 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED';
+
+export interface FileResponse {
+  id: string;
+  originalName: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  expiresAt: string;
+  status: FileStatus;
+  passwordProtected: boolean;
+}
