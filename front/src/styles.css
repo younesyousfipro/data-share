@@ -70,6 +70,7 @@ body {
 }
 
 input,
+select,
 button {
   font: inherit;
 }
@@ -109,7 +110,8 @@ button {
   gap: var(--space-1);
 }
 
-.field input {
+.field input,
+.field select {
   padding: var(--space-1-5) var(--space-2);
   border: 1px solid var(--color-grey-border);
   border-radius: var(--radius-field);
@@ -142,6 +144,32 @@ button {
   border-radius: var(--radius-field);
   background: rgba(255, 129, 45, 0.13);
   color: var(--color-orange-text);
+  cursor: pointer;
+}
+
+.button-primary:disabled,
+.button-secondary:disabled {
+  border-color: rgba(183, 167, 156, 0.2);
+  background: rgba(183, 167, 156, 0.2);
+  color: var(--color-grey-text);
+  cursor: not-allowed;
+}
+
+.button-secondary {
+  padding: var(--space-1) var(--space-1-5);
+  border: 1px solid var(--color-orange-border);
+  border-radius: var(--radius-field);
+  background: none;
+  color: var(--color-orange-text);
+  cursor: pointer;
+}
+
+.button-tertiary {
+  padding: var(--space-1) var(--space-1-5);
+  border: none;
+  background: none;
+  color: var(--color-orange-text);
+  text-decoration: underline;
   cursor: pointer;
 }
 

@@ -30,7 +30,7 @@ priorité, et en échec comme en succès.
 | Connexion : JWT, même message d'erreur que l'email ou le mot de passe soit faux | US04 | accès impossible, ou liste des comptes devinable | unitaire + intégration + E2E |
 | Routes protégées : `401` sans JWT valide | US01 (jeton émis par US04) | données d'un compte accessibles sans connexion | intégration |
 | Droits sur les fichiers : un compte ne voit ni ne supprime les fichiers d'un autre (`404`) | US05, US06 | fuite ou perte de fichiers d'autrui | intégration |
-| Envoi : 1 Go max, extensions refusées, durée de 1 à 7 jours, mot de passe ≥ 6 | US01 | fichiers dangereux ou hors limites stockés | unitaire + intégration + E2E |
+| Envoi : 1 Go max, extensions refusées, durée de 1 à 7 jours, mot de passe de 6 à 18 caractères | US01 | fichiers dangereux ou hors limites stockés | unitaire + intégration + E2E |
 | Téléchargement : `410` si expiré, `403` si mot de passe faux | US02 | fichier accessible après expiration ou sans son mot de passe | unitaire + intégration + E2E |
 | Suppression physique : fiche et fichier effacés | US06 | fichier conservé alors que l'utilisateur le croit supprimé | unitaire + intégration |
 
@@ -77,5 +77,27 @@ commande échoue (décision du 2026-10-07).
 | `login.spec.ts` (front) | unitaire | message « compte créé » seulement avec `?registered=true` · formulaire vide : deux erreurs · email mal formé, erreur reliée au champ · espaces retirés de l'email · mot de passe court accepté (longueur contrôlée à l'inscription) · aucun appel si le formulaire est invalide · envoi puis redirection vers `/` · `401` : « email ou mot de passe incorrect » · autre erreur : message générique · double clic : une seule requête |
 | `header.spec.ts` (front) | unitaire | « Se connecter » vers `/login` si déconnecté · bascule sur « Mon espace » dès la connexion, sans recréer le composant |
 
-Les tests reçoivent une clé JWT factice par la configuration Maven (Surefire) : ils
-tournent sans `.env`.
+### US01 — Upload (back)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `LocalFileStorageTest` | unitaire, vrai disque (dossier temporaire) | dossier créé au démarrage · fichier écrit sous son UUID · fichier existant jamais écrasé · effacement · effacement d'un fichier absent sans erreur · erreur disque remontée |
+| `FileMapperTest` | unitaire | champs recopiés, hash jamais exposé (`passwordProtected`) · statut `ACTIVE`, `EXPIRING_SOON` (moins de 24 h), `EXPIRED` |
+| `FileServiceTest` | unitaire | disque **puis** base, sous le même UUID · 7 jours par défaut, durée choisie appliquée · seul le hash du mot de passe enregistré · extensions interdites refusées avant toute écriture (`exe`, `.pdf.EXE`, `sh`, `jar`) · noms acceptés (sans extension, `.exe.zip`) · nom vide ou de plus de 255 caractères refusé · échec de la base : fichier effacé et erreur d'origine remontée |
+| `RestExceptionHandlerTest` | unitaire | fichier de plus de 1 Go : `413` au format `ErrorDetailsDTO` (MockMvc ne passe pas par la limite de taille, d'où un test direct du gestionnaire) |
+| `FileControllerTest` | intégration | `201` : fiche sans hash ni `accountId`, rattachée au compte du jeton, fichier présent sur le disque · `401` sans jeton, jeton falsifié, jeton expiré · `400` : extension interdite (rien d'enregistré), mot de passe trop court (sans renvoyer la valeur), durée hors limites, fichier absent |
+
+Les tests reçoivent une clé JWT factice et un dossier de stockage dans
+`target/test-uploads` par la configuration Maven (Surefire) : ils tournent sans `.env`
+et ne touchent pas aux fichiers de dev.
+
+### US01 — Upload (front)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `auth.interceptor.spec.ts` | unitaire | jeton envoyé aux routes protégées · aucun jeton vers `/api/auth/**` et `/api/download/**` · requête inchangée sans jeton · `401` d'une route protégée : jeton effacé, redirection vers `/login`, erreur transmise à la page · `401` de `/api/auth/login` laissé à la page · autre erreur : jeton conservé |
+| `auth.guard.spec.ts` | unitaire, vrai routeur | page affichée avec un jeton · sans jeton, redirection vers `/login` |
+| `auth.service.spec.ts` | unitaire | `logout` : jeton effacé, `isLoggedIn` faux |
+| `file.service.spec.ts` | unitaire | `POST /api/files` en multipart : fichier, mot de passe, durée · aucun champ `password` si le mot de passe est vide |
+| `file-size.pipe.spec.ts` | unitaire | octets, puis Ko, Mo, Go par paliers de 1024, une décimale à la française |
+| `upload.spec.ts` | unitaire | accueil, sélecteur ouvert par « Choisir » et « Changer » · nom et taille du fichier · annulation du sélecteur : fichier conservé · 1 Go pile accepté, 1 Go + 1 octet refusé (bouton désactivé) · dernière extension interdite refusée quelle que soit la casse, `.exe.zip` et fichier sans extension acceptés · 7 jours par défaut · envoi du mot de passe et de la durée choisis · mot de passe de 5 ou 19 caractères refusé · fichier refusé jamais envoyé · double clic : une seule requête, message d'envoi · durée de conservation annoncée · lien `/download/<id>` affiché et copié, message si la copie est refusée · « Envoyer un autre fichier » : formulaire vierge · `413`, `400`, autre erreur : message adapté, nouvel essai possible |
