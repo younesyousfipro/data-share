@@ -38,6 +38,9 @@
       </button>
       <!-- Always in the page, so that screen readers announce the message when it appears -->
       <p class="copy-message" role="status">{{ copyMessage() }}</p>
+      <button class="button-tertiary restart-button" type="button" (click)="restart()">
+        Envoyer un autre fichier
+      </button>
     } @else {
       <form class="form" [formGroup]="form" (ngSubmit)="submit()">
         @if (fileError(); as error) {

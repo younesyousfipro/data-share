@@ -265,6 +265,22 @@ describe('Upload', () => {
       expect(copyMessage()).toBe('Lien copié.');
     });
 
+    it('should start again from the home page with a fresh form', async () => {
+      await chooseFile();
+      await fillPassword('secret1');
+      await chooseExpiration('3 jours');
+      await submitForm();
+
+      page.querySelector<HTMLButtonElement>('.restart-button')!.click();
+      await fixture.whenStable();
+      expect(title()).toBe('Tu veux partager un fichier ?');
+
+      await chooseFile('autre.pdf');
+      const select = page.querySelector<HTMLSelectElement>('#expiration')!;
+      expect(page.querySelector<HTMLInputElement>('#password')!.value).toBe('');
+      expect(select.options[select.selectedIndex].text.trim()).toBe('Une semaine');
+    });
+
     it('should explain what to do when the copy is refused', async () => {
       writeText.mockRejectedValue(new Error('denied'));
       await sendFile();

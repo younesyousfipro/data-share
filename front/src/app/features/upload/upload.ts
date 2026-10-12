@@ -62,13 +62,23 @@ export class Upload {
     return null;
   });
 
-  // Cancelling the file picker gives no file: the previous choice is kept
+  // Cancelling the file picker gives no file: the previous choice is kept.
+  // The input is emptied so that choosing the same file again still triggers a change.
   protected selectFile(input: HTMLInputElement): void {
     const file = input.files?.[0];
     if (file) {
       this.file.set(file);
       this.serverError.set(null);
     }
+    input.value = '';
+  }
+
+  protected restart(): void {
+    this.file.set(null);
+    this.uploadedFile.set(null);
+    this.sending.set(false);
+    this.copyMessage.set(null);
+    this.form.reset();
   }
 
   protected submit(): void {

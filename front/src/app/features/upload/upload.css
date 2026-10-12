@@ -109,3 +109,8 @@
 .copy-message {
   margin-top: var(--space-1);
 }
+
+.restart-button {
+  display: block;
+  margin: var(--space-2) auto 0;
+}
