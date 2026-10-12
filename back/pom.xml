@@ -171,6 +171,8 @@
 					<environmentVariables>
 						<!-- Fake key for tests only, so they run without .env (CI) -->
 						<JWT_SECRET>test-only-secret-key-of-at-least-32-bytes</JWT_SECRET>
+						<!-- Files uploaded by the tests stay in target/, removed by mvn clean -->
+						<STORAGE_DIRECTORY>${project.build.directory}/test-uploads</STORAGE_DIRECTORY>
 					</environmentVariables>
 				</configuration>
 			</plugin>
