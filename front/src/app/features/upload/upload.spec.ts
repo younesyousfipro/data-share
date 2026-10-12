@@ -224,6 +224,56 @@ describe('Upload', () => {
     });
   });
 
+  describe('share link', () => {
+    let writeText: Mock;
+
+    beforeEach(() => {
+      writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    });
+
+    async function sendFile(): Promise<void> {
+      await chooseFile();
+      await submitForm();
+    }
+
+    // Waits for the clipboard answer, then for the page to show the message
+    async function copyLink(): Promise<void> {
+      page.querySelector<HTMLButtonElement>('.copy-button')!.click();
+      await writeText.mock.results[0].value.catch(() => {});
+      await fixture.whenStable();
+    }
+
+    function copyMessage(): string | undefined {
+      return page.querySelector('[role="status"]')?.textContent?.trim();
+    }
+
+    it('should show the link to the download page of the file', async () => {
+      await sendFile();
+
+      const link = page.querySelector<HTMLAnchorElement>('.share-link a')!;
+      const expected = `${window.location.origin}/download/${uploadedFile.id}`;
+      expect(link.textContent).toBe(expected);
+      expect(link.getAttribute('href')).toBe(expected);
+    });
+
+    it('should copy the link and confirm it', async () => {
+      await sendFile();
+      await copyLink();
+
+      expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/download/${uploadedFile.id}`);
+      expect(copyMessage()).toBe('Lien copié.');
+    });
+
+    it('should explain what to do when the copy is refused', async () => {
+      writeText.mockRejectedValue(new Error('denied'));
+      await sendFile();
+      await copyLink();
+
+      expect(copyMessage()).toBe('Copie impossible : sélectionne le lien pour le copier.');
+    });
+  });
+
   describe('server errors', () => {
     async function sendAndFailWith(status: number): Promise<void> {
       upload.mockReturnValue(throwError(() => new HttpErrorResponse({ status })));

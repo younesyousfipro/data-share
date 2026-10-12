@@ -27,8 +27,17 @@
       }
     </div>
 
-    @if (uploadedFile()) {
+    @if (shareLink(); as link) {
       <p class="success">Félicitations, ton fichier sera conservé chez nous pendant {{ keptFor() }} !</p>
+      <p class="share-link"><a class="link" [href]="link">{{ link }}</a></p>
+      <button class="button-primary copy-button" type="button" (click)="copyLink(link)">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3.33325 9.99998H2.66659C2.31296 9.99998 1.97382 9.8595 1.72378 9.60946C1.47373 9.35941 1.33325 9.02027 1.33325 8.66665V2.66665C1.33325 2.31302 1.47373 1.97389 1.72378 1.72384C1.97382 1.47379 2.31296 1.33331 2.66659 1.33331H8.66658C9.02021 1.33331 9.35935 1.47379 9.60939 1.72384C9.85944 1.97389 9.99992 2.31302 9.99992 2.66665V3.33331M7.33325 5.99998H13.3333C14.0696 5.99998 14.6666 6.59693 14.6666 7.33331V13.3333C14.6666 14.0697 14.0696 14.6666 13.3333 14.6666H7.33325C6.59687 14.6666 5.99992 14.0697 5.99992 13.3333V7.33331C5.99992 6.59693 6.59687 5.99998 7.33325 5.99998Z" />
+        </svg>
+        Copier le lien
+      </button>
+      <!-- Always in the page, so that screen readers announce the message when it appears -->
+      <p class="copy-message" role="status">{{ copyMessage() }}</p>
     } @else {
       <form class="form" [formGroup]="form" (ngSubmit)="submit()">
         @if (fileError(); as error) {

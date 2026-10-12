@@ -61,7 +61,8 @@
   font-size: var(--font-size-small);
 }
 
-.upload-button {
+.upload-button,
+.copy-button {
   display: flex;
   align-items: center;
   align-self: center;
@@ -69,21 +70,42 @@
   padding-inline: var(--space-2);
 }
 
-.upload-button svg {
+.upload-button svg,
+.copy-button svg {
   width: 16px;
   height: 16px;
 }
 
 .sending,
-.success {
+.success,
+.share-link,
+.copy-message {
   margin: 0;
 }
 
-.sending {
+.sending,
+.copy-message {
   font-size: var(--font-size-small);
   text-align: center;
 }
 
 .success {
-  margin-top: var(--space-3);
+  margin-block: var(--space-3) var(--space-2);
+}
+
+/* Long link: wraps anywhere rather than overflowing the card */
+.share-link {
+  margin-bottom: var(--space-2);
+  padding: var(--space-1-5) var(--space-2);
+  border-radius: var(--radius-field);
+  background: var(--color-cream);
+  overflow-wrap: anywhere;
+}
+
+.copy-button {
+  margin-inline: auto;
+}
+
+.copy-message {
+  margin-top: var(--space-1);
 }

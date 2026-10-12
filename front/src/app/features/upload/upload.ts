@@ -34,6 +34,13 @@ export class Upload {
   protected readonly sending = signal(false);
   protected readonly serverError = signal<string | null>(null);
   protected readonly uploadedFile = signal<FileResponse | null>(null);
+  protected readonly copyMessage = signal<string | null>(null);
+
+  // The link opens the download page of the front (US02), not the API
+  protected readonly shareLink = computed(() => {
+    const uploadedFile = this.uploadedFile();
+    return uploadedFile ? `${window.location.origin}/download/${uploadedFile.id}` : null;
+  });
 
   // Validators.minLength accepts an empty value: the password stays optional
   protected readonly form = inject(NonNullableFormBuilder).group({
@@ -80,6 +87,13 @@ export class Upload {
         this.serverError.set(uploadErrorMessage(error.status));
       },
     });
+  }
+
+  protected copyLink(link: string): void {
+    navigator.clipboard.writeText(link).then(
+      () => this.copyMessage.set('Lien copié.'),
+      () => this.copyMessage.set('Copie impossible : sélectionne le lien pour le copier.'),
+    );
   }
 
   protected passwordError(): string | null {
