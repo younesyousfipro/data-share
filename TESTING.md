@@ -107,6 +107,13 @@ et ne touchent pas aux fichiers de dev.
 | `FileServiceTest` | unitaire | fiches dans l'ordre du repository, expirées comprises, statut et `passwordProtected` calculés · aucun fichier → liste vide |
 | `FileControllerTest` | intégration | seulement les fichiers du compte du jeton (pas ceux d'un autre compte) · **triés par la base**, le plus récent d'abord · fichier expiré listé en `EXPIRED` · ni hash ni `accountId` · `401` sans jeton |
 
+### US06 — Suppression (back)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `FileServiceTest` | unitaire | fiche effacée **puis** fichier sur le disque · fichier expiré supprimable · fichier d'un autre compte : `404`, rien d'effacé · fichier inconnu : `404` · échec du disque : aucune erreur remontée, fiche effacée (orphelin journalisé) |
+| `FileControllerTest` | intégration | `204` : fiche absente de la base **et** fichier absent du disque · fichier d'un autre compte : `404`, fiche et fichier intacts · fichier inconnu : `404` · `400` identifiant qui n'est pas un UUID · `401` sans jeton, rien d'effacé |
+
 ### US01 — Upload (front)
 
 | Test | Niveau | Cas couverts |
