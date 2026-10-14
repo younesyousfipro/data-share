@@ -29,10 +29,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -166,6 +168,55 @@ class FileControllerTest {
 						.header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value(containsString("file")));
+	}
+
+	@Test
+	void listMyFiles_returnsOnlyOwnFilesNewestFirstIncludingExpired() throws Exception {
+		// GIVEN: two files of the logged-in account, one of another account
+		Instant now = Instant.now();
+		savedFile(account, "old-expired.pdf", now.minus(Duration.ofDays(8)), now.minus(Duration.ofDays(1)));
+		savedFile(account, "recent.jpg", now.minus(Duration.ofHours(1)), now.plus(Duration.ofDays(3)));
+		savedFile(otherAccount(), "not-mine.txt", now, now.plus(Duration.ofDays(3)));
+
+		// WHEN
+		ResultActions result = mockMvc.perform(get(FILES_URL)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+
+		// THEN: sorted by the database, status computed, no hash nor account id
+		result.andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(2))
+				.andExpect(jsonPath("$[0].originalName").value("recent.jpg"))
+				.andExpect(jsonPath("$[0].status").value("ACTIVE"))
+				.andExpect(jsonPath("$[1].originalName").value("old-expired.pdf"))
+				.andExpect(jsonPath("$[1].status").value("EXPIRED"))
+				.andExpect(jsonPath("$[0].passwordHash").doesNotExist())
+				.andExpect(jsonPath("$[0].accountId").doesNotExist());
+	}
+
+	@Test
+	void listMyFiles_returns401WithoutToken() throws Exception {
+		mockMvc.perform(get(FILES_URL))
+				.andExpect(status().isUnauthorized())
+				.andExpect(header().exists(HttpHeaders.WWW_AUTHENTICATE));
+	}
+
+	// Database row only: listing never reads the disk
+	private void savedFile(Account owner, String name, Instant uploadedAt, Instant expiresAt) {
+		SharedFile file = new SharedFile();
+		file.setId(UUID.randomUUID());
+		file.setAccountId(owner.getId());
+		file.setOriginalName(name);
+		file.setSizeBytes(5);
+		file.setUploadedAt(uploadedAt);
+		file.setExpiresAt(expiresAt);
+		sharedFileRepository.save(file);
+	}
+
+	private Account otherAccount() {
+		Account other = new Account();
+		other.setEmail("paul@mail.fr");
+		other.setPasswordHash("$2a$10$hash");
+		return accountRepository.save(other);
 	}
 
 	private MockMultipartHttpServletRequestBuilder uploadRequest(String fileName) {
