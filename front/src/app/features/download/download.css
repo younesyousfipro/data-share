@@ -1,0 +1,11 @@
+.download {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.loading {
+  margin: 0;
+  font-size: var(--font-size-small);
+  text-align: center;
+}
