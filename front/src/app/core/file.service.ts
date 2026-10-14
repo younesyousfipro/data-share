@@ -22,4 +22,8 @@ export class FileService {
   list(): Observable<FileResponse[]> {
     return this.http.get<FileResponse[]>('/api/files');
   }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/files/${id}`);
+  }
 }

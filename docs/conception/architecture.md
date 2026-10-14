@@ -707,6 +707,19 @@ sequenceDiagram
 Le fichier d'un autre compte reçoit la même réponse qu'un fichier inexistant : l'API
 ne confirme pas son existence.
 
+**Côté front, la ligne est retirée sans recharger la liste.** Le `204` suffit à savoir
+que le fichier n'existe plus :
+
+```
+deleteFile ─► window.confirm ── annulé ──► rien
+                  └── confirmé ─► FileService.delete ── 204 ──► files.update (ligne retirée) ──► visibleFiles suit
+                                                     │           + « … a été supprimé. » (role="status")
+                                                     └─ erreur ─► ligne gardée + message (role="alert")
+```
+
+Une ligne expirée garde « Supprimer » : la purge efface le fichier mais garde la fiche,
+que l'utilisateur peut ainsi retirer de son historique (décision du 2026-10-14).
+
 ### Expiration et purge (US01, US10 partielle)
 
 Le statut n'est **jamais stocké** : `FileMapper` le calcule à chaque conversion en

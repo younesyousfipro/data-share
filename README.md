@@ -107,8 +107,8 @@ Parcours disponibles : création de compte (`/register`), connexion (`/login`), 
 upload d'un fichier sur l'accueil (`/`), réservé aux utilisateurs connectés : sans
 jeton, l'accueil renvoie vers la connexion. Le lien obtenu (`/download/<id>`) ouvre la
 page de téléchargement, **publique** : elle s'ouvre aussi sans être connecté.
-« Mon espace » (`/my-files`) liste les fichiers du compte ; « Déconnexion » ramène à
-`/login`.
+« Mon espace » (`/my-files`) liste les fichiers du compte, et permet d'en supprimer un
+après confirmation ; « Déconnexion » ramène à `/login`.
 
 ### Appels à l'API : le proxy de dev
 

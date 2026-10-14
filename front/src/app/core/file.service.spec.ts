@@ -63,4 +63,17 @@ describe('FileService', () => {
     call.flush([]);
     expect(received).toEqual([]);
   });
+
+  it('delete should DELETE the file by its id', () => {
+    let completed = false;
+
+    service.delete('3f2b9c1e-8d4a-4c3b-9f1e-2a6b7c8da7d4').subscribe({
+      complete: () => (completed = true),
+    });
+
+    const call = httpMock.expectOne('/api/files/3f2b9c1e-8d4a-4c3b-9f1e-2a6b7c8da7d4');
+    expect(call.request.method).toBe('DELETE');
+    call.flush(null, { status: 204, statusText: 'No Content' });
+    expect(completed).toBe(true);
+  });
 });

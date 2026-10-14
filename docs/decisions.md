@@ -1042,17 +1042,18 @@ clavier à écrire. Blanc sur `#E77A6E` : 2,8:1, sous le minimum de 4,5:1 (WCAG 
 
 ---
 
-## 2026-10-14 — Suppression d'un fichier expiré : permise par l'API, absente de l'écran
+## 2026-10-14 — Suppression d'un fichier expiré : permise par l'API et par l'écran
 
 **Décidé :** `DELETE /api/files/{id}` accepte un fichier expiré de son propriétaire
-(fiche supprimée, `deleteIfExists` sans effet si la purge est déjà passée). Le front suit
-la maquette : une ligne expirée n'a **aucun** bouton.
-**Écarté :** refuser la suppression d'un fichier expiré côté API ; un bouton
-« Supprimer » sur les lignes expirées.
-**Pourquoi :** l'API n'a aucune raison de refuser au propriétaire d'effacer sa propre
-fiche. L'écran, lui, suit la maquette (« un fichier expiré n'offre plus aucune action »).
-**Conséquence assumée :** une fiche expirée reste dans l'historique, comme le prévoit
-déjà la purge (US10 partielle), et l'utilisateur ne peut pas l'en retirer.
+(fiche supprimée, `deleteIfExists` sans effet si la purge est déjà passée). Une ligne
+expirée garde le bouton « Supprimer », seul ; « Accéder » et le cadenas disparaissent.
+**Écarté :** refuser la suppression d'un fichier expiré côté API ; une ligne expirée sans
+aucune action, comme la maquette.
+**Pourquoi :** la purge (US10 partielle) garde la fiche d'un fichier expiré : sans ce
+bouton, l'historique accumulerait des lignes mortes que l'utilisateur ne pourrait pas
+retirer. La spécification (« supprimer un fichier avant son expiration ») décrit le cas
+courant, elle n'interdit pas l'autre.
+**Conséquence assumée :** écart avec la maquette sur les lignes expirées.
 
 ---
 
@@ -1064,3 +1065,17 @@ déjà la purge (US10 partielle), et l'utilisateur ne peut pas l'en retirer.
 au lecteur d'écran gérés par le navigateur) ; simple à tester (`vi.spyOn(window,
 'confirm')`, acceptée d'office par Cypress).
 **Conséquence assumée :** la boîte ne suit pas le design system.
+
+---
+
+## 2026-10-14 — Suppression : ligne retirée sur place, succès annoncé
+
+**Décidé :** après le `204`, la page retire la ligne de la liste déjà chargée, sans
+rappeler `GET /api/files`, et affiche « « nom » a été supprimé. » dans une zone
+`role="status"` présente en permanence dans la page.
+**Écarté :** recharger la liste ; déplacer le focus après la suppression.
+**Pourquoi :** le `204` dit déjà tout, un second appel n'apprendrait rien. Sans message,
+la ligne disparaît en silence : un lecteur d'écran n'annonce rien. La zone existe avant
+le message, sinon certains lecteurs d'écran ne l'annoncent pas.
+**Conséquence assumée :** le bouton cliqué disparaît avec sa ligne : au clavier, le
+focus repart du début de la page.

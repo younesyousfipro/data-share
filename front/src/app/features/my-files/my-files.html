@@ -4,6 +4,13 @@
     <a class="button-dark" routerLink="/">Ajouter des fichiers</a>
   </div>
 
+  <!-- Always in the page: a screen reader only announces a change inside a status region it already knows -->
+  <div role="status">
+    @if (deletedName(); as name) {
+      <p class="callout-info">« {{ name }} » a été supprimé.</p>
+    }
+  </div>
+
   @if (files(); as files) {
     @if (files.length === 0) {
       <p>Vous n'avez encore envoyé aucun fichier.</p>
@@ -19,6 +26,10 @@
           >{{ option.label }}</button>
         }
       </div>
+
+      @if (deleteFailed()) {
+        <p class="callout-error" role="alert">La suppression a échoué, veuillez réessayer.</p>
+      }
 
       @if (visibleFiles().length === 0) {
         <p>{{ filter() === 'EXPIRED' ? 'Aucun fichier expiré.' : 'Aucun fichier actif.' }}</p>
@@ -44,17 +55,33 @@
                 </p>
               </div>
 
-              @if (file.status === 'EXPIRED') {
-                <p class="expired-note">Ce fichier a expiré, il n'est plus stocké chez nous</p>
-              } @else {
-                <div class="actions">
-                  @if (file.passwordProtected) {
-                    <svg class="lock" role="img" aria-label="Protégé par un mot de passe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                  }
-                  <!-- The file name tells screen readers which of the "Accéder" links this is -->
+              <div class="actions">
+                @if (file.status === 'EXPIRED') {
+                  <p class="expired-note">Ce fichier a expiré, il n'est plus stocké chez nous</p>
+                } @else if (file.passwordProtected) {
+                  <svg class="lock" role="img" aria-label="Protégé par un mot de passe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                }
+                <!-- The file name tells screen readers which file each button acts on -->
+                <button
+                  type="button"
+                  class="button-secondary delete"
+                  [attr.aria-label]="'Supprimer ' + file.originalName"
+                  (click)="deleteFile(file)"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    <line x1="10" x2="10" y1="11" y2="17" />
+                    <line x1="14" x2="14" y1="11" y2="17" />
+                  </svg>
+                  Supprimer
+                </button>
+                <!-- An expired file can no longer be downloaded (410) -->
+                @if (file.status !== 'EXPIRED') {
                   <a
                     class="button-secondary access"
                     [routerLink]="['/download', file.id]"
@@ -66,8 +93,8 @@
                       <path d="m12 5 7 7-7 7" />
                     </svg>
                   </a>
-                </div>
-              }
+                }
+              </div>
             </li>
           }
         </ul>
