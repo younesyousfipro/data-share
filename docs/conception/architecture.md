@@ -581,6 +581,41 @@ DownloadService.download ─► Blob (fichier entier en mémoire)
 Le nom vient des métadonnées, pas de `Content-Disposition` ; les erreurs sont lues par
 leur code, le corps d'une erreur arrivant lui aussi en `Blob` (décisions du 2026-10-14).
 
+### Historique (US05)
+
+```mermaid
+sequenceDiagram
+  actor U as Utilisateur connecté
+  participant F as Front
+  participant A as API
+  participant B as Base
+
+  U->>F: ouvre « Mes fichiers »
+  F->>A: GET /api/files + Bearer JWT (aucun identifiant de compte)
+  A->>A: signature et date du JWT vérifiées, sinon 401
+  A->>B: fichiers du compte lu dans le JWT, les plus récents d'abord
+  A-->>F: liste de fiches, expirées comprises, statut calculé
+  F-->>U: liste filtrée par onglet (Actifs par défaut)
+```
+
+**Chaque couche fait une seule chose :**
+
+| Couche | Rôle |
+|---|---|
+| `FileController` | lit l'identifiant du compte dans le JWT (`sub`) |
+| `FileService.listOwnedBy` | convertit chaque fiche en DTO via `FileMapper` : statut calculé, hash jamais exposé |
+| `SharedFileRepository` | `findByAccountIdOrderByUploadedAtDesc` : Spring Data génère `WHERE account_id = ? ORDER BY uploaded_at DESC` à partir du nom |
+
+**Tri et filtre en base.** PostgreSQL ne renvoie que les fichiers du compte, déjà triés ;
+l'index `idx_shared_file_account` sert le filtre. Le front n'a plus qu'à répartir la
+liste entre les onglets, sans retrier.
+
+**Sécurité : le compte vient du jeton, jamais de la requête.** Il n'existe pas de
+`GET /api/files?accountId=7` : l'URL ne contient aucun identifiant que l'utilisateur
+pourrait changer. Le compte est le `sub` d'un JWT dont la signature est vérifiée ; le
+modifier invalide la signature (voir « Le JWT et sa clé de signature »). Sans jeton
+valide : `401`, avant même d'atteindre le controller.
+
 ### Suppression (US06)
 
 ```mermaid

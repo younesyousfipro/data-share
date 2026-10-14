@@ -84,7 +84,8 @@ paths:
       tags: [files]
       summary: List my files (US05)
       description: |
-        All files of the authenticated account, expired ones included.
+        All files of the authenticated account, expired ones included,
+        most recent upload first.
         The account is read from the JWT, never from a parameter.
         Tabs (all / active / expired) are filtered client-side.
       operationId: listMyFiles

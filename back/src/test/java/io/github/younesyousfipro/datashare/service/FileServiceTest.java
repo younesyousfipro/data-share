@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -152,6 +153,29 @@ class FileServiceTest {
 	}
 
 	@Test
+	void listOwnedBy_returnsEveryFileWithItsStatus() {
+		// GIVEN: repository order kept, expired file included
+		SharedFile active = newFile(Duration.ofDays(3), FILE_PASSWORD);
+		SharedFile expired = newFile(Duration.ofHours(-1), null);
+		when(sharedFileRepository.findByAccountIdOrderByUploadedAtDesc(ACCOUNT_ID)).thenReturn(List.of(active, expired));
+
+		// WHEN
+		List<FileResponseDTO> files = fileService.listOwnedBy(ACCOUNT_ID);
+
+		// THEN
+		assertThat(files).extracting(FileResponseDTO::id).containsExactly(active.getId(), expired.getId());
+		assertThat(files).extracting(FileResponseDTO::status).containsExactly(FileStatus.ACTIVE, FileStatus.EXPIRED);
+		assertThat(files.getFirst().passwordProtected()).isTrue();
+	}
+
+	@Test
+	void listOwnedBy_noFile_returnsEmptyList() {
+		when(sharedFileRepository.findByAccountIdOrderByUploadedAtDesc(ACCOUNT_ID)).thenReturn(List.of());
+
+		assertThat(fileService.listOwnedBy(ACCOUNT_ID)).isEmpty();
+	}
+
+	@Test
 	void getMetadata_validFile_returnsMetadata() {
 		// GIVEN
 		SharedFile file = storedFile(Duration.ofDays(3), FILE_PASSWORD);
@@ -248,8 +272,15 @@ class FileServiceTest {
 		verify(fileStorage, never()).read(any());
 	}
 
-	// File found by the repository; a negative duration makes it expired
+	// File found by the repository through findById
 	private SharedFile storedFile(Duration timeLeft, String password) {
+		SharedFile file = newFile(timeLeft, password);
+		when(sharedFileRepository.findById(file.getId())).thenReturn(Optional.of(file));
+		return file;
+	}
+
+	// A negative duration makes it expired
+	private SharedFile newFile(Duration timeLeft, String password) {
 		Instant now = Instant.now();
 		SharedFile file = new SharedFile();
 		file.setId(UUID.randomUUID());
@@ -261,7 +292,6 @@ class FileServiceTest {
 		if (password != null) {
 			file.setPasswordHash(passwordEncoder.encode(password));
 		}
-		when(sharedFileRepository.findById(file.getId())).thenReturn(Optional.of(file));
 		return file;
 	}
 

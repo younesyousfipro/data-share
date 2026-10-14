@@ -206,6 +206,17 @@ Sans mot de passe sur le fichier, le second appel se fait sans `-H` ni `-d`.
 | `404` | lien inconnu |
 | `410` | fichier expiré |
 
+Lister ses fichiers (US05), avec le jeton :
+
+```bash
+curl -i http://localhost:8080/api/files -H "Authorization: Bearer $TOKEN"
+```
+
+| Code | Signification |
+|---|---|
+| `200` | fiches du compte, expirées comprises, la plus récente d'abord (`[]` si aucune) |
+| `401` | jeton absent, falsifié ou expiré (corps vide) |
+
 Les erreurs ont toutes le même format JSON (`timestamp`, `message`, `details`), sauf le
 `401` des routes protégées, à corps vide.
 

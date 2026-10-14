@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
@@ -73,6 +74,13 @@ public class FileService {
 			throw e;
 		}
 		return fileMapper.toResponse(file);
+	}
+
+	// Expired files included: the front sorts them into tabs
+	public List<FileResponseDTO> listOwnedBy(Long accountId) {
+		return sharedFileRepository.findByAccountIdOrderByUploadedAtDesc(accountId).stream()
+				.map(fileMapper::toResponse)
+				.toList();
 	}
 
 	public FileMetadataResponseDTO getMetadata(UUID id) {

@@ -100,6 +100,13 @@ et ne touchent pas aux fichiers de dev.
 | `FileServiceTest` | unitaire | inconnu → `404`, expiré → `410` (même avec un mot de passe faux) · mot de passe absent, vide, faux ou de casse différente → `403` · bon mot de passe, ou fichier non protégé sans mot de passe → contenu · **à chaque refus, le fichier n'est jamais ouvert** |
 | `DownloadControllerTest` | intégration, **sans JWT** | métadonnées sans id, date d'envoi, propriétaire ni hash · `200` avec ou sans corps, fichier en pièce jointe, `application/octet-stream`, `Content-Length`, `nosniff` · nom accentué encodé en UTF-8 · `403`, `404`, `410` au format `ErrorDetailsDTO` · `400` : identifiant qui n'est pas un UUID, mot de passe de plus de 18 caractères (sans renvoyer la valeur) · `415` pour un corps en texte brut, avec le message de Spring (et non un message générique) |
 
+### US05 — Historique (back)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `FileServiceTest` | unitaire | fiches dans l'ordre du repository, expirées comprises, statut et `passwordProtected` calculés · aucun fichier → liste vide |
+| `FileControllerTest` | intégration | seulement les fichiers du compte du jeton (pas ceux d'un autre compte) · **triés par la base**, le plus récent d'abord · fichier expiré listé en `EXPIRED` · ni hash ni `accountId` · `401` sans jeton |
+
 ### US01 — Upload (front)
 
 | Test | Niveau | Cas couverts |
