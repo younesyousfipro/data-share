@@ -1,9 +1,14 @@
 package io.github.younesyousfipro.datashare.service;
 
+import io.github.younesyousfipro.datashare.dto.FileContentDTO;
+import io.github.younesyousfipro.datashare.dto.FileMetadataResponseDTO;
 import io.github.younesyousfipro.datashare.dto.FileResponseDTO;
 import io.github.younesyousfipro.datashare.dto.FileStatus;
 import io.github.younesyousfipro.datashare.dto.UploadRequestDTO;
+import io.github.younesyousfipro.datashare.exception.FileExpiredException;
 import io.github.younesyousfipro.datashare.exception.InvalidFileException;
+import io.github.younesyousfipro.datashare.exception.SharedFileNotFoundException;
+import io.github.younesyousfipro.datashare.exception.WrongFilePasswordException;
 import io.github.younesyousfipro.datashare.mapper.FileMapper;
 import io.github.younesyousfipro.datashare.model.SharedFile;
 import io.github.younesyousfipro.datashare.repository.SharedFileRepository;
@@ -12,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -22,14 +28,20 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -137,6 +149,120 @@ class FileServiceTest {
 				.isSameAs(failure);
 		SharedFile attempted = captureSaved();
 		verify(fileStorage).delete(attempted.getId());
+	}
+
+	@Test
+	void getMetadata_validFile_returnsMetadata() {
+		// GIVEN
+		SharedFile file = storedFile(Duration.ofDays(3), FILE_PASSWORD);
+
+		// WHEN
+		FileMetadataResponseDTO metadata = fileService.getMetadata(file.getId());
+
+		// THEN
+		assertThat(metadata.originalName()).isEqualTo("vacances.mp4");
+		assertThat(metadata.passwordProtected()).isTrue();
+	}
+
+	@Test
+	void getMetadata_unknownFile_throwsNotFound() {
+		// GIVEN
+		UUID unknownId = UUID.randomUUID();
+		when(sharedFileRepository.findById(unknownId)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> fileService.getMetadata(unknownId))
+				.isInstanceOf(SharedFileNotFoundException.class);
+	}
+
+	@Test
+	void getMetadata_expiredFile_throwsExpired() {
+		// GIVEN
+		SharedFile file = storedFile(Duration.ofHours(-1), null);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> fileService.getMetadata(file.getId()))
+				.isInstanceOf(FileExpiredException.class);
+	}
+
+	@Test
+	void download_unprotectedFile_returnsContentWithoutPassword() {
+		// GIVEN
+		SharedFile file = storedFile(Duration.ofDays(3), null);
+		InputStream content = new ByteArrayInputStream("hello".getBytes(StandardCharsets.UTF_8));
+		when(fileStorage.read(file.getId())).thenReturn(content);
+
+		// WHEN
+		FileContentDTO download = fileService.download(file.getId(), null);
+
+		// THEN
+		assertThat(download.originalName()).isEqualTo("vacances.mp4");
+		assertThat(download.sizeBytes()).isEqualTo(5);
+		assertThat(download.content()).isSameAs(content);
+	}
+
+	@Test
+	void download_protectedFileWithRightPassword_returnsContent() {
+		// GIVEN
+		SharedFile file = storedFile(Duration.ofDays(3), FILE_PASSWORD);
+		InputStream content = new ByteArrayInputStream("hello".getBytes(StandardCharsets.UTF_8));
+		when(fileStorage.read(file.getId())).thenReturn(content);
+
+		// WHEN / THEN
+		assertThat(fileService.download(file.getId(), FILE_PASSWORD).content()).isSameAs(content);
+	}
+
+	@ParameterizedTest
+	@NullAndEmptySource
+	@ValueSource(strings = {"wrong1", "S3CRET"})
+	void download_protectedFileWithMissingOrWrongPassword_throwsWithoutOpeningFile(String password) {
+		// GIVEN
+		SharedFile file = storedFile(Duration.ofDays(3), FILE_PASSWORD);
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> fileService.download(file.getId(), password))
+				.isInstanceOf(WrongFilePasswordException.class);
+		verify(fileStorage, never()).read(any());
+	}
+
+	@Test
+	void download_expiredProtectedFile_throwsExpiredBeforeCheckingPassword() {
+		// GIVEN
+		SharedFile file = storedFile(Duration.ofHours(-1), FILE_PASSWORD);
+
+		// WHEN / THEN: expired wins, even with a wrong password
+		assertThatThrownBy(() -> fileService.download(file.getId(), "wrong1"))
+				.isInstanceOf(FileExpiredException.class);
+		verify(fileStorage, never()).read(any());
+	}
+
+	@Test
+	void download_unknownFile_throwsNotFound() {
+		// GIVEN
+		UUID unknownId = UUID.randomUUID();
+		when(sharedFileRepository.findById(unknownId)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> fileService.download(unknownId, null))
+				.isInstanceOf(SharedFileNotFoundException.class);
+		verify(fileStorage, never()).read(any());
+	}
+
+	// File found by the repository; a negative duration makes it expired
+	private SharedFile storedFile(Duration timeLeft, String password) {
+		Instant now = Instant.now();
+		SharedFile file = new SharedFile();
+		file.setId(UUID.randomUUID());
+		file.setAccountId(ACCOUNT_ID);
+		file.setOriginalName("vacances.mp4");
+		file.setSizeBytes(5);
+		file.setUploadedAt(now.minus(Duration.ofDays(1)));
+		file.setExpiresAt(now.plus(timeLeft));
+		if (password != null) {
+			file.setPasswordHash(passwordEncoder.encode(password));
+		}
+		when(sharedFileRepository.findById(file.getId())).thenReturn(Optional.of(file));
+		return file;
 	}
 
 	private UploadRequestDTO request(String name, String password, Integer expirationDays) {

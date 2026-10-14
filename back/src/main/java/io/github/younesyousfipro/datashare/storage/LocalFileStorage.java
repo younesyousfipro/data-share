@@ -30,6 +30,17 @@ public class LocalFileStorage implements FileStorage {
 		}
 	}
 
+	// Only opens the file: the bytes are read later, chunk by chunk, while the HTTP response is written.
+	// The whole file is never held in memory
+	@Override
+	public InputStream read(UUID id) {
+		try {
+			return Files.newInputStream(pathOf(id));
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
 	// No error if the file is already gone: the purge can run twice
 	@Override
 	public void delete(UUID id) {

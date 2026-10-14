@@ -40,6 +40,7 @@ session expirée et déconnecterait l'utilisateur.
 | Nom obligatoire, 255 caractères au plus | taille de la colonne : une requête forgée finirait sinon en `500` |
 | Sur le disque, le fichier porte son UUID, jamais son nom d'origine | un nom piégé (`../../config`) ne peut pas faire écrire hors du dossier de stockage (*path traversal*) |
 | Expiration de 1 à 7 jours ; fichier expiré refusé (`410`), effacé du disque chaque nuit | un lien ne reste pas valable indéfiniment |
+| Téléchargé en pièce jointe, toujours en `application/octet-stream`, avec `nosniff` | un fichier `.html` ou `.svg` déposé est enregistré par le navigateur, jamais affiché ni exécuté sous notre domaine |
 | Chaque règle est contrôlée par le front **et** par l'API | le front se contourne (`curl`) : seule l'API fait foi |
 
 La spécification laisse la liste « à définir selon la politique de sécurité ». Elle
@@ -57,6 +58,7 @@ Linux et macOS :
 | Information | Protection |
 |---|---|
 | empreintes des mots de passe | jamais renvoyées : la fiche d'un fichier indique seulement s'il est protégé |
+| propriétaire d'un fichier partagé | la page de téléchargement ne reçoit que nom, taille, expiration et « protégé » : ni identifiant, ni date d'envoi, ni compte |
 | emails inscrits, à la connexion | même message que l'email ou le mot de passe soit faux |
 | valeurs saisies refusées | une erreur de validation cite le champ, jamais la valeur (ce peut être un mot de passe) |
 | erreurs internes | `500` et message générique ; le détail reste dans les logs du serveur |

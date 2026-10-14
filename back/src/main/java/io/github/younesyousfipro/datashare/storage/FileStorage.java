@@ -8,6 +8,8 @@ public interface FileStorage {
 
 	void store(UUID id, InputStream content);
 
+	InputStream read(UUID id);
+
 	void delete(UUID id);
 
 }

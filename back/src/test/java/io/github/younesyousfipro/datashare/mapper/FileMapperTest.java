@@ -1,5 +1,6 @@
 package io.github.younesyousfipro.datashare.mapper;
 
+import io.github.younesyousfipro.datashare.dto.FileMetadataResponseDTO;
 import io.github.younesyousfipro.datashare.dto.FileResponseDTO;
 import io.github.younesyousfipro.datashare.dto.FileStatus;
 import io.github.younesyousfipro.datashare.model.SharedFile;
@@ -59,6 +60,31 @@ class FileMapperTest {
 	void toResponse_expiryPassed_isExpired() {
 		assertThat(fileMapper.toResponse(fileExpiringIn(Duration.ofHours(-1))).status())
 				.isEqualTo(FileStatus.EXPIRED);
+	}
+
+	@Test
+	void toMetadataResponse_copiesPublicFields() {
+		// GIVEN
+		SharedFile file = fileExpiringIn(Duration.ofDays(7));
+
+		// WHEN
+		FileMetadataResponseDTO response = fileMapper.toMetadataResponse(file);
+
+		// THEN
+		assertThat(response.originalName()).isEqualTo("vacances.mp4");
+		assertThat(response.sizeBytes()).isEqualTo(2_726_297L);
+		assertThat(response.expiresAt()).isEqualTo(file.getExpiresAt());
+		assertThat(response.passwordProtected()).isFalse();
+	}
+
+	@Test
+	void toMetadataResponse_withPasswordHash_isPasswordProtected() {
+		// GIVEN
+		SharedFile file = fileExpiringIn(Duration.ofDays(7));
+		file.setPasswordHash("$2a$10$hash");
+
+		// WHEN / THEN
+		assertThat(fileMapper.toMetadataResponse(file).passwordProtected()).isTrue();
 	}
 
 	private SharedFile fileExpiringIn(Duration timeLeft) {

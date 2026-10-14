@@ -91,6 +91,15 @@ Les tests reçoivent une clé JWT factice et un dossier de stockage dans
 `target/test-uploads` par la configuration Maven (Surefire) : ils tournent sans `.env`
 et ne touchent pas aux fichiers de dev.
 
+### US02 — Téléchargement (back)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `LocalFileStorageTest` | unitaire, vrai disque | fichier relu tel qu'écrit · fichier absent : erreur |
+| `FileMapperTest` | unitaire | métadonnées publiques recopiées, hash réduit à `passwordProtected` |
+| `FileServiceTest` | unitaire | inconnu → `404`, expiré → `410` (même avec un mot de passe faux) · mot de passe absent, vide, faux ou de casse différente → `403` · bon mot de passe, ou fichier non protégé sans mot de passe → contenu · **à chaque refus, le fichier n'est jamais ouvert** |
+| `DownloadControllerTest` | intégration, **sans JWT** | métadonnées sans id, date d'envoi, propriétaire ni hash · `200` avec ou sans corps, fichier en pièce jointe, `application/octet-stream`, `Content-Length`, `nosniff` · nom accentué encodé en UTF-8 · `403`, `404`, `410` au format `ErrorDetailsDTO` · `400` : identifiant qui n'est pas un UUID, mot de passe de plus de 18 caractères (sans renvoyer la valeur) · `415` pour un corps en texte brut, avec le message de Spring (et non un message générique) |
+
 ### US01 — Upload (front)
 
 | Test | Niveau | Cas couverts |

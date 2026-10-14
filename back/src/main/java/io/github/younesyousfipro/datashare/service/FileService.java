@@ -1,8 +1,13 @@
 package io.github.younesyousfipro.datashare.service;
 
+import io.github.younesyousfipro.datashare.dto.FileContentDTO;
+import io.github.younesyousfipro.datashare.dto.FileMetadataResponseDTO;
 import io.github.younesyousfipro.datashare.dto.FileResponseDTO;
 import io.github.younesyousfipro.datashare.dto.UploadRequestDTO;
+import io.github.younesyousfipro.datashare.exception.FileExpiredException;
 import io.github.younesyousfipro.datashare.exception.InvalidFileException;
+import io.github.younesyousfipro.datashare.exception.SharedFileNotFoundException;
+import io.github.younesyousfipro.datashare.exception.WrongFilePasswordException;
 import io.github.younesyousfipro.datashare.mapper.FileMapper;
 import io.github.younesyousfipro.datashare.model.SharedFile;
 import io.github.younesyousfipro.datashare.repository.SharedFileRepository;
@@ -68,6 +73,36 @@ public class FileService {
 			throw e;
 		}
 		return fileMapper.toResponse(file);
+	}
+
+	public FileMetadataResponseDTO getMetadata(UUID id) {
+		return fileMapper.toMetadataResponse(findDownloadable(id));
+	}
+
+	public FileContentDTO download(UUID id, String password) {
+		SharedFile file = findDownloadable(id);
+		checkPassword(file, password);
+		// Opened last, once every check has passed: nothing can fail before Spring takes the stream and closes it
+		return new FileContentDTO(file.getOriginalName(), file.getSizeBytes(), fileStorage.read(id));
+	}
+
+	// Unknown (404) then expired (410): an expired file is gone for everyone, password or not
+	private SharedFile findDownloadable(UUID id) {
+		SharedFile file = sharedFileRepository.findById(id).orElseThrow(SharedFileNotFoundException::new);
+		if (!file.getExpiresAt().isAfter(Instant.now())) {
+			throw new FileExpiredException();
+		}
+		return file;
+	}
+
+	// A password sent for an unprotected file is ignored
+	private void checkPassword(SharedFile file, String password) {
+		if (file.getPasswordHash() == null) {
+			return;
+		}
+		if (password == null || !passwordEncoder.matches(password, file.getPasswordHash())) {
+			throw new WrongFilePasswordException();
+		}
 	}
 
 	private void checkName(String name) {
