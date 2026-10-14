@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -71,7 +72,9 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 	@Override
 	protected ResponseEntity<Object> handleExceptionInternal(Exception e, Object body, HttpHeaders headers,
 			HttpStatusCode status, WebRequest request) {
-		String message = body instanceof ProblemDetail problem ? problem.getDetail() : "Request failed";
+		String message = body instanceof ProblemDetail problem ? problem.getDetail()
+				: e instanceof ErrorResponse errorResponse ? errorResponse.getBody().getDetail()
+				: "Request failed";
 		return ResponseEntity.status(status).headers(headers).body(errorDetails(message, request));
 	}
 

@@ -186,6 +186,18 @@ class DownloadControllerTest {
 				.andExpect(jsonPath("$.message").value(not(containsString(tooLong))));
 	}
 
+	// A Spring MVC error keeps Spring's own message, not a generic one
+	@Test
+	void download_returns415WithSpringMessageForNonJsonBody() throws Exception {
+		SharedFile file = storedFile("vacances.mp4", Duration.ofDays(3), FILE_PASSWORD);
+
+		mockMvc.perform(post(DOWNLOAD_URL + file.getId())
+						.contentType(MediaType.TEXT_PLAIN)
+						.content(FILE_PASSWORD))
+				.andExpect(status().isUnsupportedMediaType())
+				.andExpect(jsonPath("$.message").value(containsString("text/plain")));
+	}
+
 	// RFC 5987 encoding: UTF-8 bytes, percent-encoded
 	@Test
 	void download_nonAsciiName_isEncodedInHeader() throws Exception {
