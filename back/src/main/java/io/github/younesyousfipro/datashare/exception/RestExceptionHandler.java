@@ -33,6 +33,22 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorDetails(e.getMessage(), request));
 	}
 
+	@ExceptionHandler(SharedFileNotFoundException.class)
+	public ResponseEntity<ErrorDetailsDTO> handleFileNotFound(SharedFileNotFoundException e, WebRequest request) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorDetails(e.getMessage(), request));
+	}
+
+	@ExceptionHandler(FileExpiredException.class)
+	public ResponseEntity<ErrorDetailsDTO> handleFileExpired(FileExpiredException e, WebRequest request) {
+		return ResponseEntity.status(HttpStatus.GONE).body(errorDetails(e.getMessage(), request));
+	}
+
+	// 403, not 401: the front interceptor reads a 401 as an expired session and logs the user out
+	@ExceptionHandler(WrongFilePasswordException.class)
+	public ResponseEntity<ErrorDetailsDTO> handleWrongFilePassword(WrongFilePasswordException e, WebRequest request) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorDetails(e.getMessage(), request));
+	}
+
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorDetailsDTO> handleUnexpected(Exception e, WebRequest request) {
 		logger.error("Unexpected error on " + request.getDescription(false), e);
