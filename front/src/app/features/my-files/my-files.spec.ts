@@ -9,6 +9,7 @@ import { FileService } from '../../core/file.service';
 import { MyFiles } from './my-files';
 
 describe('MyFiles', () => {
+  let harness: RouterTestingHarness;
   let page: HTMLElement;
   let list: Mock;
 
@@ -44,12 +45,27 @@ describe('MyFiles', () => {
   afterEach(() => vi.useRealTimers());
 
   async function openPage(): Promise<void> {
-    const harness = await RouterTestingHarness.create('/my-files');
+    harness = await RouterTestingHarness.create('/my-files');
     page = harness.routeNativeElement!;
   }
 
   function rows(): HTMLElement[] {
     return Array.from(page.querySelectorAll('.file-row'));
+  }
+
+  function names(): (string | null | undefined)[] {
+    return rows().map((row) => row.querySelector('.file-name')?.textContent);
+  }
+
+  function filterButton(label: string): HTMLButtonElement {
+    return Array.from(page.querySelectorAll<HTMLButtonElement>('.filter')).find(
+      (button) => button.textContent === label,
+    )!;
+  }
+
+  async function showFilter(label: string): Promise<void> {
+    filterButton(label).click();
+    await harness.fixture.whenStable();
   }
 
   it('should ask the API for the files on page load', async () => {
@@ -80,13 +96,14 @@ describe('MyFiles', () => {
 
     await openPage();
 
-    expect(rows().map((row) => row.querySelector('.file-name')?.textContent)).toEqual(['b.txt', 'a.txt']);
+    expect(names()).toEqual(['b.txt', 'a.txt']);
   });
 
   describe('expiry', () => {
     async function expiryOf(status: FileStatus, expiresAt: Date): Promise<HTMLElement> {
       list.mockReturnValue(of([file({ status, expiresAt: expiresAt.toISOString() })]));
       await openPage();
+      await showFilter('Tous');
       return rows()[0].querySelector('.expiry')!;
     }
 
@@ -123,6 +140,7 @@ describe('MyFiles', () => {
     list.mockReturnValue(of([file({ status: 'EXPIRED' })]));
 
     await openPage();
+    await showFilter('Expiré');
 
     const row = rows()[0];
     expect(row.querySelector('a')).toBeNull();
@@ -148,6 +166,62 @@ describe('MyFiles', () => {
 
     expect(page.textContent).toContain("Vous n'avez encore envoyé aucun fichier.");
     expect(page.querySelector('.file-list')).toBeNull();
+    expect(page.querySelector('.filters')).toBeNull();
+  });
+
+  describe('filters', () => {
+    beforeEach(() => {
+      list.mockReturnValue(
+        of([
+          file({ id: '1', originalName: 'active.txt', status: 'ACTIVE' }),
+          file({ id: '2', originalName: 'soon.txt', status: 'EXPIRING_SOON' }),
+          file({ id: '3', originalName: 'expired.txt', status: 'EXPIRED' }),
+        ]),
+      );
+    });
+
+    it('should open on "Actifs": the files not expired yet, expiring soon included', async () => {
+      await openPage();
+
+      expect(filterButton('Actifs').getAttribute('aria-pressed')).toBe('true');
+      expect(filterButton('Tous').getAttribute('aria-pressed')).toBe('false');
+      expect(names()).toEqual(['active.txt', 'soon.txt']);
+    });
+
+    it('should show every file under "Tous"', async () => {
+      await openPage();
+
+      await showFilter('Tous');
+
+      expect(filterButton('Tous').getAttribute('aria-pressed')).toBe('true');
+      expect(names()).toEqual(['active.txt', 'soon.txt', 'expired.txt']);
+    });
+
+    it('should show only the expired files under "Expiré"', async () => {
+      await openPage();
+
+      await showFilter('Expiré');
+
+      expect(names()).toEqual(['expired.txt']);
+    });
+
+    it('should say so when no file is active', async () => {
+      list.mockReturnValue(of([file({ status: 'EXPIRED' })]));
+
+      await openPage();
+
+      expect(page.textContent).toContain('Aucun fichier actif.');
+      expect(page.querySelector('.file-list')).toBeNull();
+    });
+
+    it('should say so when no file has expired', async () => {
+      list.mockReturnValue(of([file()]));
+      await openPage();
+
+      await showFilter('Expiré');
+
+      expect(page.textContent).toContain('Aucun fichier expiré.');
+    });
   });
 
   it('should show a generic message when the list cannot be loaded', async () => {
