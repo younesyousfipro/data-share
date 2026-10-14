@@ -139,5 +139,12 @@ et ne touchent pas aux fichiers de dev.
 |---|---|---|
 | `file.service.spec.ts` | unitaire | `GET /api/files`, sans identifiant de compte |
 | `expiry.spec.ts` | unitaire | « aujourd'hui » / « demain » / « dans 2 jours » comptés en jours du calendrier · jour de 23 h au passage à l'heure d'été · seuil des 24 h |
-| `my-files.spec.ts` | unitaire, vrai routeur, horloge figée | liste demandée au chargement · chargement annoncé · nom, taille, date d'envoi, échéance · ordre de l'API conservé · couleur d'après le `status` de l'API : aucune, orange, rouge · « Accéder » vers `/download/<id>`, nommé d'après le fichier · fichier expiré : aucune action, message · cadenas seulement si protégé · onglet « Actifs » par défaut (`EXPIRING_SOON` compris), « Tous », « Expiré » · onglet vide ou compte sans fichier : message · erreur : message générique · « Ajouter des fichiers » vers `/` |
+| `my-files.spec.ts` | unitaire, vrai routeur, horloge figée | liste demandée au chargement · chargement annoncé · nom, taille, date d'envoi, échéance · ordre de l'API conservé · couleur d'après le `status` de l'API : aucune, orange, rouge · « Accéder » vers `/download/<id>`, nommé d'après le fichier · fichier expiré : ni « Accéder » ni cadenas, message · cadenas seulement si protégé · onglet « Actifs » par défaut (`EXPIRING_SOON` compris), « Tous », « Expiré » · onglet vide ou compte sans fichier : message · erreur : message générique · « Ajouter des fichiers » vers `/` |
 | `header.spec.ts` | unitaire | « Déconnexion » : `logout` appelé, redirection vers `/login` · absent si déconnecté |
+
+### US06 — Suppression (front)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `file.service.spec.ts` | unitaire | `DELETE /api/files/<id>`, `204` sans corps |
+| `my-files.spec.ts` | unitaire, vrai routeur | « Supprimer » nommé d'après le fichier · présent aussi sur un fichier expiré · confirmation refusée : aucun appel, ligne gardée · confirmée : ligne retirée, suppression annoncée (`role="status"`) · erreur : ligne gardée, message d'erreur |
