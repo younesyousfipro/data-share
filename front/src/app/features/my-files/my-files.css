@@ -105,14 +105,16 @@
   height: 20px;
 }
 
-.access {
+.access,
+.delete {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   text-decoration: none;
 }
 
-.access svg {
+.access svg,
+.delete svg {
   width: 16px;
   height: 16px;
 }

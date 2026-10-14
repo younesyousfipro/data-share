@@ -12,6 +12,7 @@ describe('MyFiles', () => {
   let harness: RouterTestingHarness;
   let page: HTMLElement;
   let list: Mock;
+  let deleteFile: Mock;
 
   // Local time, as the page: the tests do not depend on the machine's time zone
   const now = new Date(2026, 9, 14, 10, 0);
@@ -33,16 +34,20 @@ describe('MyFiles', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(now);
     list = vi.fn().mockReturnValue(of([file()]));
+    deleteFile = vi.fn().mockReturnValue(of(undefined));
 
     TestBed.configureTestingModule({
       providers: [
         provideRouter([{ path: 'my-files', component: MyFiles }]),
-        { provide: FileService, useValue: { list } },
+        { provide: FileService, useValue: { list, delete: deleteFile } },
       ],
     });
   });
 
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
 
   async function openPage(): Promise<void> {
     harness = await RouterTestingHarness.create('/my-files');
@@ -153,7 +158,7 @@ describe('MyFiles', () => {
     await showFilter('Expiré');
 
     const row = rows()[0];
-    expect(row.querySelector('a')).toBeNull();
+    expect(row.querySelector('a, button')).toBeNull();
     expect(row.querySelector('.expired-note')?.textContent).toBe(
       "Ce fichier a expiré, il n'est plus stocké chez nous",
     );
@@ -231,6 +236,57 @@ describe('MyFiles', () => {
       await showFilter('Expiré');
 
       expect(page.textContent).toContain('Aucun fichier expiré.');
+    });
+  });
+
+  describe('delete', () => {
+    async function clickDelete(row: HTMLElement): Promise<void> {
+      row.querySelector<HTMLButtonElement>('button.delete')!.click();
+      await harness.fixture.whenStable();
+    }
+
+    it('should name the file on the delete button of an available file', async () => {
+      await openPage();
+
+      const button = rows()[0].querySelector('button.delete')!;
+      expect(button.textContent?.trim()).toBe('Supprimer');
+      expect(button.getAttribute('aria-label')).toBe('Supprimer vacances.mp4');
+    });
+
+    it('should ask for confirmation and do nothing when the user cancels', async () => {
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      await openPage();
+
+      await clickDelete(rows()[0]);
+
+      expect(confirm).toHaveBeenCalledWith('Supprimer définitivement « vacances.mp4 » ?');
+      expect(deleteFile).not.toHaveBeenCalled();
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('should delete the file and remove its row once confirmed', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      list.mockReturnValue(of([file({ id: '1', originalName: 'a.txt' }), file({ id: '2', originalName: 'b.txt' })]));
+      await openPage();
+
+      await clickDelete(rows()[0]);
+
+      expect(deleteFile).toHaveBeenCalledWith('1');
+      expect(names()).toEqual(['b.txt']);
+      expect(page.querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('should keep the row and say so when the deletion fails', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      deleteFile.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+      await openPage();
+
+      await clickDelete(rows()[0]);
+
+      expect(rows()).toHaveLength(1);
+      expect(page.querySelector('[role="alert"]')?.textContent).toBe(
+        'La suppression a échoué, veuillez réessayer.',
+      );
     });
   });
 

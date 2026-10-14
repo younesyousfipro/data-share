@@ -17,6 +17,7 @@ type Filter = 'ALL' | 'ACTIVE' | 'EXPIRED';
 export class MyFiles {
   protected readonly files = signal<FileResponse[] | null>(null);
   protected readonly loadFailed = signal(false);
+  protected readonly deleteFailed = signal(false);
 
   protected readonly filters: { value: Filter; label: string }[] = [
     { value: 'ALL', label: 'Tous' },
@@ -34,8 +35,10 @@ export class MyFiles {
   // The statuses are computed by the API at the same moment: the texts must agree with them
   private readonly loadedAt = new Date();
 
+  private readonly fileService = inject(FileService);
+
   constructor() {
-    inject(FileService).list().subscribe({
+    this.fileService.list().subscribe({
       next: (files) => this.files.set(files),
       error: () => this.loadFailed.set(true),
     });
@@ -45,6 +48,18 @@ export class MyFiles {
     return file.status === 'EXPIRED'
       ? 'Expiré'
       : `Expire ${expiryDay(new Date(file.expiresAt), this.loadedAt)}`;
+  }
+
+  protected deleteFile(file: FileResponse): void {
+    if (!window.confirm(`Supprimer définitivement « ${file.originalName} » ?`)) {
+      return;
+    }
+    this.deleteFailed.set(false);
+    this.fileService.delete(file.id).subscribe({
+      // The row goes away without reloading the list: the API already removed it
+      next: () => this.files.update((files) => files!.filter((other) => other.id !== file.id)),
+      error: () => this.deleteFailed.set(true),
+    });
   }
 }
 
