@@ -1039,3 +1039,28 @@ panneaux : c'est un filtre, et un bouton à bascule le dit tel quel. Le lecteur 
 annonce « Actifs, bouton, enfoncé » ; `Tab` et `Entrée` suffisent, sans gestion du
 clavier à écrire. Blanc sur `#E77A6E` : 2,8:1, sous le minimum de 4,5:1 (WCAG 1.4.3).
 **Conséquence assumée :** onglet actif plus sombre que la maquette.
+
+---
+
+## 2026-10-14 — Suppression d'un fichier expiré : permise par l'API, absente de l'écran
+
+**Décidé :** `DELETE /api/files/{id}` accepte un fichier expiré de son propriétaire
+(fiche supprimée, `deleteIfExists` sans effet si la purge est déjà passée). Le front suit
+la maquette : une ligne expirée n'a **aucun** bouton.
+**Écarté :** refuser la suppression d'un fichier expiré côté API ; un bouton
+« Supprimer » sur les lignes expirées.
+**Pourquoi :** l'API n'a aucune raison de refuser au propriétaire d'effacer sa propre
+fiche. L'écran, lui, suit la maquette (« un fichier expiré n'offre plus aucune action »).
+**Conséquence assumée :** une fiche expirée reste dans l'historique, comme le prévoit
+déjà la purge (US10 partielle), et l'utilisateur ne peut pas l'en retirer.
+
+---
+
+## 2026-10-14 — Suppression : confirmation par la boîte native du navigateur
+
+**Décidé :** avant l'appel à l'API, `window.confirm("Supprimer définitivement … ?")`.
+**Écarté :** une modale maison (`<dialog>` stylé).
+**Pourquoi :** une ligne de code ; accessible sans rien écrire (focus, `Échap`, annonce
+au lecteur d'écran gérés par le navigateur) ; simple à tester (`vi.spyOn(window,
+'confirm')`, acceptée d'office par Cypress).
+**Conséquence assumée :** la boîte ne suit pas le design system.

@@ -15,6 +15,7 @@ réécrire si le prototype est retenu). Le détail de chaque arbitrage est dans
 | Schéma de base | **Flyway** | `ddl-auto` Hibernate, Liquibase | schéma versionné en SQL lisible |
 | Environnement BDD | **Docker** (Compose, lancé par Spring) | PostgreSQL installé sur le poste | une commande, même version partout |
 | Stockage fichiers | **disque local** | AWS S3, MinIO | immédiat, sans compte ni coût |
+| Envoi des fichiers | **`multipart/form-data`** | JSON + base64 | octets bruts, standard du web, géré de bout en bout par Angular et Spring |
 | Authentification | **JWT** + BCrypt | sessions serveur | API sans état, exigé par le brief |
 | Tests | JUnit, Mockito, Testcontainers · Vitest · Cypress · k6 | Jest (front) | un outil par niveau de test ; Vitest est fourni par Angular |
 
@@ -79,6 +80,32 @@ réécrire si le prototype est retenu). Le détail de chaque arbitrage est dans
 - **En production** : basculer vers un stockage objet (S3, Azure Blob) en écrivant
   une seconde implémentation de `FileStorage`. Le disque local ne permet ni
   redondance ni plusieurs instances du back.
+
+## Envoi des fichiers — `multipart/form-data`
+
+Le format standard d'un formulaire HTML avec un champ fichier : le corps est découpé en
+**parties** nommées (`file`, `password`, `expirationDays`), chacune en texte ou en
+octets bruts. Détail de la requête dans
+[`architecture.md`](architecture.md) (« Format de la requête »).
+
+- **Le fichier voyage tel quel.** En JSON, il faudrait l'encoder en base64 : +33 %
+  (1 Go deviendrait 1,33 Go à envoyer), et un corps à lire d'un seul bloc.
+- **Le fichier et ses options dans une seule requête** : pas de second appel pour le
+  mot de passe ou la durée.
+- **Rien à écrire de part et d'autre** : chaque côté a l'outil prévu pour.
+
+| Étape | Front (Angular) | Back (Spring) |
+|---|---|---|
+| construire / lire les parties | `FormData` | `@ModelAttribute` remplit `UploadRequestDTO` par nom de partie |
+| le fichier | `File` du sélecteur | `MultipartFile` |
+| en-tête et frontière (*boundary*) | posés par le navigateur | découpés par Tomcat |
+| taille | refus au-delà de 1 Go avant l'envoi | `spring.servlet.multipart.max-file-size` → `413` |
+| format | — | `consumes = multipart/form-data`, sinon `415` |
+
+- **Contrepartie** : Tomcat écrit d'abord le fichier dans un dossier temporaire, puis
+  `LocalFileStorage` le copie : deux écritures sur disque (repris dans `PERF.md`).
+- **En production** : pour les gros fichiers, le navigateur enverrait directement au
+  stockage objet par une URL signée (voir `perspectives.md`).
 
 ## Authentification — JWT
 

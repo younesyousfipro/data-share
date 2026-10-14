@@ -13,6 +13,7 @@ import io.github.younesyousfipro.datashare.model.SharedFile;
 import io.github.younesyousfipro.datashare.repository.SharedFileRepository;
 import io.github.younesyousfipro.datashare.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +29,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FileService {
@@ -81,6 +83,22 @@ public class FileService {
 		return sharedFileRepository.findByAccountIdOrderByUploadedAtDesc(accountId).stream()
 				.map(fileMapper::toResponse)
 				.toList();
+	}
+
+	// Another account's file gets the same 404 as an unknown one: its existence is not disclosed.
+	// Expired files can be deleted too: the record is still there
+	public void delete(UUID id, Long accountId) {
+		SharedFile file = sharedFileRepository.findById(id)
+				.filter(found -> found.getAccountId().equals(accountId))
+				.orElseThrow(SharedFileNotFoundException::new);
+
+		// Database first, then disk: a disk failure leaves an orphan file, never a record without its file
+		sharedFileRepository.delete(file);
+		try {
+			fileStorage.delete(id);
+		} catch (UncheckedIOException e) {
+			log.warn("File {} deleted from the database but left on disk", id, e);
+		}
 	}
 
 	public FileMetadataResponseDTO getMetadata(UUID id) {

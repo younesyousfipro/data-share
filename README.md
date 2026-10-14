@@ -218,6 +218,19 @@ curl -i http://localhost:8080/api/files -H "Authorization: Bearer $TOKEN"
 | `200` | fiches du compte, expirées comprises, la plus récente d'abord (`[]` si aucune) |
 | `401` | jeton absent, falsifié ou expiré (corps vide) |
 
+Supprimer un de ses fichiers (US06), définitivement :
+
+```bash
+curl -i -X DELETE http://localhost:8080/api/files/$ID -H "Authorization: Bearer $TOKEN"
+```
+
+| Code | Signification |
+|---|---|
+| `204` | fiche et fichier effacés, corps vide |
+| `400` | identifiant qui n'est pas un UUID |
+| `401` | jeton absent, falsifié ou expiré (corps vide) |
+| `404` | fichier inconnu, ou appartenant à un autre compte (même réponse) |
+
 Les erreurs ont toutes le même format JSON (`timestamp`, `message`, `details`), sauf le
 `401` des routes protégées, à corps vide.
 

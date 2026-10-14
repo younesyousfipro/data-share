@@ -199,6 +199,48 @@ SharedFile                               FileResponseDTO
 | **champs calculés** | le statut dépend de l'heure actuelle : calculé à chaque conversion, jamais stocké. Échéance atteinte → `EXPIRED`, moins de 24 h → `EXPIRING_SOON`. |
 | **écrit à la main** | deux conversions seulement (fiche du propriétaire, métadonnées publiques de l'US02), dont les champs utiles sont calculés : une méthode se lit et se teste mieux que des expressions dans des annotations MapStruct (décision du 2026-10-09). |
 
+**Tous les DTO n'ont pas de mapper.** Un mapper n'existe que s'il y a une vraie
+conversion d'entité à isoler et à tester. C'est la règle de ce projet, pas une règle
+universelle : ailleurs, on convertit dans le service, dans une méthode du DTO
+(`FileResponseDTO.from(entité)`) ou avec MapStruct.
+
+| DTO | Construit par | Pourquoi pas de mapper |
+|---|---|---|
+| `FileResponseDTO`, `FileMetadataResponseDTO` | `FileMapper` | — : conversion depuis `SharedFile`, avec des champs calculés |
+| `RegisterRequestDTO`, `LoginRequestDTO`, `UploadRequestDTO`, `DownloadRequestDTO` | Spring, depuis la requête | DTO **entrants** : le service lit leurs champs |
+| `LoginResponseDTO` | `AuthService` | un seul champ, le jeton |
+| `FileContentDTO` | `FileService` | usage interne, pas une conversion d'entité |
+| `ErrorDetailsDTO` | `RestExceptionHandler` | construit depuis une exception |
+
+Le sens inverse (DTO → entité, à l'upload) reste dans `FileService` : remplir une
+`SharedFile` demande des décisions métier (tirer l'UUID, calculer l'expiration,
+hacher le mot de passe), pas une simple copie.
+
+#### D'où vient chaque donnée d'une requête
+
+Chaque paramètre d'une méthode de controller vient d'un endroit précis de la requête
+HTTP. Une méthode prend ce dont elle a besoin : DTO, identifiant, JWT, ou plusieurs.
+
+| Source | Annotation | Ce qu'elle dit |
+|---|---|---|
+| corps de la requête | `@RequestBody` (JSON), `@ModelAttribute` (formulaire multipart) → **DTO** | les données envoyées |
+| URL | `@PathVariable` | sur quel fichier on agit |
+| en-tête `Authorization` | `@AuthenticationPrincipal Jwt` | **qui** appelle |
+
+| Route | DTO | URL | JWT | Réponse |
+|---|---|---|---|---|
+| `register`, `login` | ✓ | | | rien / `LoginResponseDTO` |
+| `upload` (US01) | ✓ `UploadRequestDTO` : fichier, mot de passe, durée | | ✓ propriétaire du fichier | `FileResponseDTO` |
+| `listMyFiles` (US05) | | | ✓ dont on liste les fichiers | liste de `FileResponseDTO` |
+| `delete` (US06) | | ✓ `id` | ✓ propriétaire vérifié | rien (`204`) |
+| `getMetadata` (US02) | | ✓ `id` | | `FileMetadataResponseDTO` |
+| `download` (US02) | ✓ `DownloadRequestDTO`, facultatif | ✓ `id` | | le fichier |
+
+Le DTO décrit les données échangées ; le JWT identifie l'appelant. **Le compte n'est
+jamais un champ de DTO ni un paramètre d'URL** : on ne peut ni envoyer un fichier au nom
+d'un autre, ni lister ou supprimer les fichiers d'un autre. Les routes de
+téléchargement, publiques, n'ont pas de JWT : le destinataire n'a pas de compte.
+
 #### Parcours d'une requête : l'inscription (US03)
 
 ```mermaid
@@ -348,9 +390,10 @@ sequenceDiagram
   A->>A: lit l'identifiant du compte dans le JWT
 ```
 
-L'identité vient **toujours du JWT**, jamais d'un paramètre : l'historique (US05)
-et la suppression (US06) savent ainsi à qui ils répondent, sans qu'on puisse se faire
-passer pour un autre compte. Un message identique pour « email inconnu » et « mot de
+L'identité vient **toujours du JWT**, jamais d'un paramètre : l'upload (US01),
+l'historique (US05) et la suppression (US06) savent ainsi à qui ils répondent, sans qu'on puisse se faire
+passer pour un autre compte. Détail par route : « D'où vient chaque donnée d'une requête ».
+Un message identique pour « email inconnu » et « mot de
 passe faux » évite de révéler quels emails sont inscrits.
 
 #### Le JWT et sa clé de signature
@@ -656,6 +699,7 @@ sequenceDiagram
   end
   A->>B: supprime la fiche
   A->>D: efface le fichier
+  Note over A,D: échec du disque : orphelin journalisé (log.warn), 204 quand même
   A-->>F: 204
   F-->>U: retire le fichier de la liste
 ```
@@ -691,6 +735,45 @@ disque qu'une fiche qui pointe vers un fichier absent**.
 | Suppression (US06) | `FileService` | base, puis disque | fichier orphelin, journalisé |
 | Purge (US10 partielle) | `FilePurgeService` | disque seul, la fiche est gardée | réessayé la nuit suivante |
 
+**Pourquoi la fiche avant le fichier, à la suppression.** Dans l'ordre inverse, un échec
+en base laisserait une fiche sans fichier : visible dans l'historique, lien partagé
+encore valide, et une erreur au téléchargement. Un orphelin, lui, est invisible pour
+l'utilisateur ; seul le journal (`log.warn`, avec l'UUID) le signale. Pour que la fiche
+soit vraiment effacée **avant** le disque, `FileService.delete` n'est pas
+`@Transactional` : `repository.delete()` valide sa propre transaction aussitôt. Avec une
+transaction englobante, la validation n'aurait lieu qu'après l'effacement du disque, et
+pourrait encore échouer.
+
+**Volume des orphelins.** Un orphelin ne naît que d'une panne du disque au moment précis
+de l'effacement (droits, erreur d'entrée-sortie) : rare, et repéré dans le journal. La purge
+ne les voit pas, elle part des fiches. Leur nettoyage est une perspective (« Purge des
+orphelins »).
+
 `FileStorage` exécute, il ne décide jamais. Effacer un fichier déjà absent n'est pas
 une erreur (`deleteIfExists`) : la purge peut repasser après une suppression, ou tourner
 deux fois, sans rien casser.
+
+## Journalisation
+
+Certaines erreurs ne sont **pas renvoyées à l'utilisateur** : un orphelin laissé par la
+suppression ne l'empêche pas d'obtenir son `204`. Sans trace écrite, ce problème serait
+silencieux. Le journal est la seule façon de le voir.
+
+| Pièce | Rôle |
+|---|---|
+| **SLF4J** | l'interface appelée par le code (`log.warn(...)`) |
+| **Logback** | l'implémentation qui écrit, fournie par Spring Boot (`spring-boot-starter-logging`) |
+| **`@Slf4j`** (Lombok) | génère le champ `log` de la classe |
+
+Ce qu'un log apporte, là où un `System.out.println` n'apporterait rien :
+
+- un **niveau** (`WARN`) : filtrable, repérable parmi les messages courants ;
+- l'**horodatage** et la **classe** émettrice ;
+- l'**UUID** du fichier, qui est aussi son nom sur le disque : l'orphelin se retrouve
+  et s'efface à la main ;
+- la **cause** (trace de l'exception) : droits, disque plein, erreur matérielle ;
+- une **destination décidée par la configuration**, pas par le code : console en
+  développement, outil de collecte en production.
+
+C'est aussi le déclencheur de la perspective « Purge des orphelins » : on l'automatise
+quand les avertissements se répètent dans les logs.

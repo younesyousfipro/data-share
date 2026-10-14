@@ -25,7 +25,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -34,6 +36,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -200,8 +203,71 @@ class FileControllerTest {
 				.andExpect(header().exists(HttpHeaders.WWW_AUTHENTICATE));
 	}
 
+	@Test
+	void delete_returns204AndRemovesFileFromDatabaseAndDisk() throws Exception {
+		// GIVEN
+		SharedFile file = storedFile(account);
+
+		// WHEN
+		ResultActions result = mockMvc.perform(delete(FILES_URL + "/" + file.getId())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+
+		// THEN
+		result.andExpect(status().isNoContent());
+		assertThat(sharedFileRepository.existsById(file.getId())).isFalse();
+		assertThat(Path.of(storageDirectory, file.getId().toString())).doesNotExist();
+	}
+
+	@Test
+	void delete_returns404ForFileOfAnotherAccountAndKeepsIt() throws Exception {
+		// GIVEN
+		SharedFile file = storedFile(otherAccount());
+
+		// WHEN
+		ResultActions result = mockMvc.perform(delete(FILES_URL + "/" + file.getId())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+
+		// THEN: same answer as an unknown file, nothing deleted
+		result.andExpect(status().isNotFound());
+		assertThat(sharedFileRepository.existsById(file.getId())).isTrue();
+		assertThat(Path.of(storageDirectory, file.getId().toString())).exists();
+	}
+
+	@Test
+	void delete_returns404ForUnknownFile() throws Exception {
+		mockMvc.perform(delete(FILES_URL + "/" + UUID.randomUUID())
+						.header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void delete_returns400ForMalformedId() throws Exception {
+		mockMvc.perform(delete(FILES_URL + "/not-a-uuid")
+						.header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void delete_returns401WithoutTokenAndKeepsFile() throws Exception {
+		// GIVEN
+		SharedFile file = storedFile(account);
+
+		// WHEN / THEN
+		mockMvc.perform(delete(FILES_URL + "/" + file.getId()))
+				.andExpect(status().isUnauthorized());
+		assertThat(sharedFileRepository.existsById(file.getId())).isTrue();
+	}
+
+	// Database row and file on disk, as after a real upload
+	private SharedFile storedFile(Account owner) throws IOException {
+		Instant now = Instant.now();
+		SharedFile file = savedFile(owner, "vacances.mp4", now, now.plus(Duration.ofDays(3)));
+		Files.writeString(Path.of(storageDirectory, file.getId().toString()), "hello");
+		return file;
+	}
+
 	// Database row only: listing never reads the disk
-	private void savedFile(Account owner, String name, Instant uploadedAt, Instant expiresAt) {
+	private SharedFile savedFile(Account owner, String name, Instant uploadedAt, Instant expiresAt) {
 		SharedFile file = new SharedFile();
 		file.setId(UUID.randomUUID());
 		file.setAccountId(owner.getId());
@@ -209,7 +275,7 @@ class FileControllerTest {
 		file.setSizeBytes(5);
 		file.setUploadedAt(uploadedAt);
 		file.setExpiresAt(expiresAt);
-		sharedFileRepository.save(file);
+		return sharedFileRepository.save(file);
 	}
 
 	private Account otherAccount() {
