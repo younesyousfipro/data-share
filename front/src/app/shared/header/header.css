@@ -1,5 +1,8 @@
+/* On a narrow screen the buttons wrap under the logo */
 .header {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
   justify-content: space-between;
   align-items: center;
   padding: var(--space-2);
@@ -13,12 +16,25 @@
   text-decoration: none;
 }
 
-.header-button {
-  padding: var(--space-1-5);
-  border-radius: var(--radius-field);
-  background: var(--color-black-button);
-  color: var(--color-cream);
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Black, not the mockup orange: on the gradient, orange text falls to 3.2:1 */
+.logout {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-black);
   text-decoration: none;
+}
+
+.logout svg {
+  width: 16px;
+  height: 16px;
 }
 
 @media (min-width: 768px) {

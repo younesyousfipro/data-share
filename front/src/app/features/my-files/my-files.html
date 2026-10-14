@@ -1,5 +1,8 @@
 <section class="my-files" aria-labelledby="my-files-title">
-  <h1 id="my-files-title" class="my-files-title">Mes fichiers</h1>
+  <div class="my-files-header">
+    <h1 id="my-files-title" class="my-files-title">Mes fichiers</h1>
+    <a class="button-dark" routerLink="/">Ajouter des fichiers</a>
+  </div>
 
   @if (files(); as files) {
     @if (files.length === 0) {

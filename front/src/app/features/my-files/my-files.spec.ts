@@ -68,6 +68,16 @@ describe('MyFiles', () => {
     await harness.fixture.whenStable();
   }
 
+  it('should offer to upload more files, even before the list is loaded', async () => {
+    list.mockReturnValue(NEVER);
+
+    await openPage();
+
+    const add = page.querySelector<HTMLAnchorElement>('a.button-dark')!;
+    expect(add.textContent).toBe('Ajouter des fichiers');
+    expect(add.getAttribute('href')).toBe('/');
+  });
+
   it('should ask the API for the files on page load', async () => {
     await openPage();
 

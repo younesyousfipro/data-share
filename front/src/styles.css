@@ -165,6 +165,15 @@ button {
   cursor: pointer;
 }
 
+/* "Dark" variant of the design system, also used on links */
+.button-dark {
+  padding: var(--space-1-5);
+  border-radius: var(--radius-field);
+  background: var(--color-black-button);
+  color: var(--color-cream);
+  text-decoration: none;
+}
+
 .button-tertiary {
   padding: var(--space-1) var(--space-1-5);
   border: none;

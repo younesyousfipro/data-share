@@ -12,8 +12,17 @@
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
 }
 
+.my-files-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-bottom: var(--space-3);
+}
+
 .my-files-title {
-  margin: 0 0 var(--space-3);
+  margin: 0;
   font-size: var(--font-size-title);
   line-height: 40px;
 }
