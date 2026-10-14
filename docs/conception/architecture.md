@@ -240,12 +240,12 @@ suit, une fois la route vérifiée.
 ### Front — par écran
 
 ```
-styles.css    design tokens + classes partagées : .card, .field, .button-primary, .callout-*, .file (icône, nom, taille)…
+styles.css    design tokens + classes partagées : .card, .field, .button-primary, .button-dark, .callout-*, .file (icône, nom, taille)…
 app/
   app.*       coquille commune : <app-header>, <router-outlet>, footer
   core/       api.models, auth.service, file.service (propriétaire), download.service (public), auth.interceptor (ajoute le JWT), auth.guard (réserve une page aux connectés)
   features/   auth/ (register/, login/) · upload/ · download/ · my-files/
-  shared/     ce que plusieurs écrans réutilisent : header/ (« Se connecter » ou « Mon espace ») · file-size.pipe (« 2,6 Mo ») · save-file (enregistre un fichier reçu)
+  shared/     ce que plusieurs écrans réutilisent : header/ (« Se connecter », ou « Mon espace » + « Déconnexion ») · file-size.pipe (« 2,6 Mo ») · save-file (enregistre un fichier reçu) · expiry (« demain », « dans 3 jours »)
 ```
 
 Un élément **sans comportement** (bouton, champ, carte) est une classe CSS ; il ne
@@ -273,7 +273,13 @@ requête n'est envoyée.
 ```
 login() ──200──► tap : jeton dans localStorage + signal token ──► isLoggedIn (computed) ──► header : « Mon espace »
         ──401──► tap sauté, rien n'est enregistré ──────────────────────────────────────► page : message d'erreur
+logout() ──────► jeton retiré de localStorage + signal à null ──► isLoggedIn faux ───────► header : « Se connecter »
 ```
+
+`logout()` a deux appelants : le bouton « Déconnexion » du header (US05) et
+l'intercepteur sur un `401`. Tous deux redirigent ensuite vers `/login`. **Aucun appel
+à l'API** : le JWT est sans état, le back n'a pas de session à fermer. Un jeton copié
+reste donc valable jusqu'à son `exp` (1 h au plus, limite tracée dans `SECURITY.md`).
 
 | Support | Survit au rechargement | Prévient l'affichage quand il change |
 |---|---|---|
@@ -609,6 +615,20 @@ sequenceDiagram
 **Tri et filtre en base.** PostgreSQL ne renvoie que les fichiers du compte, déjà triés ;
 l'index `idx_shared_file_account` sert le filtre. Le front n'a plus qu'à répartir la
 liste entre les onglets, sans retrier.
+
+**Côté front, un seul appel, filtré sur place.** La page garde la réponse de l'API et
+en déduit la liste affichée :
+
+```
+files (signal : réponse de GET /api/files) ──┐
+                                             ├── computed ──► visibleFiles ──► liste
+filter (signal : onglet, « Actifs » au départ)┘
+```
+
+Changer d'onglet ne modifie que `filter` : aucune requête, l'ordre de l'API est gardé.
+La **couleur** de l'échéance vient du `status` calculé par le back ; seul le **texte**
+(« Expire demain ») est calculé par le front, avec `shared/expiry.ts`, comme sur la page
+de téléchargement.
 
 **Sécurité : le compte vient du jeton, jamais de la requête.** Il n'existe pas de
 `GET /api/files?accountId=7` : l'URL ne contient aucun identifiant que l'utilisateur

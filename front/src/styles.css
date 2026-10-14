@@ -37,6 +37,7 @@
   --color-files-row: rgba(255, 193, 145, .05);
   --color-files-border: rgba(215, 99, 11, .20);
   --color-status-expired: #C62020;   /* not the callout red */
+  --color-filter-active: #C0453A;    /* mockup #E77A6E is 2.8:1 with white text, see decisions.md */
 
   /* Typography */
   --font-family: 'DM Sans', sans-serif;
@@ -162,6 +163,15 @@ button {
   background: none;
   color: var(--color-orange-text);
   cursor: pointer;
+}
+
+/* "Dark" variant of the design system, also used on links */
+.button-dark {
+  padding: var(--space-1-5);
+  border-radius: var(--radius-field);
+  background: var(--color-black-button);
+  color: var(--color-cream);
+  text-decoration: none;
 }
 
 .button-tertiary {

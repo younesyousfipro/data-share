@@ -4,10 +4,9 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute } from '@angular/router';
 import { FileMetadataResponse } from '../../core/api.models';
 import { DownloadService } from '../../core/download.service';
+import { expiresWithinADay, expiryDay } from '../../shared/expiry';
 import { FileSizePipe } from '../../shared/file-size.pipe';
 import { saveFile } from '../../shared/save-file';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 // The file is gone since the page was opened (deleted, expired): the whole page says so
 const UNAVAILABLE_STATUSES = [400, 404, 410];
@@ -94,22 +93,11 @@ export class Download {
   }
 }
 
-// Warning under 24 h, as the EXPIRING_SOON status of the API. The text counts calendar
-// days: a file expiring at 9 am tomorrow expires "demain", even 30 h ahead.
 function expiryNotice(expiresAt: Date, now: Date): ExpiryNotice {
-  const days = calendarDaysBetween(now, expiresAt);
-  const when = days === 0 ? "aujourd'hui" : days === 1 ? 'demain' : `dans ${days} jours`;
   return {
-    text: `Ce fichier expirera ${when}.`,
-    warning: expiresAt.getTime() - now.getTime() < DAY_MS,
+    text: `Ce fichier expirera ${expiryDay(expiresAt, now)}.`,
+    warning: expiresWithinADay(expiresAt, now),
   };
-}
-
-// Math.round absorbs the hour gained or lost when summer time starts or ends
-function calendarDaysBetween(from: Date, to: Date): number {
-  const startOfDay = (date: Date) =>
-    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-  return Math.round((startOfDay(to) - startOfDay(from)) / DAY_MS);
 }
 
 // 400 is an id that is not a UUID: for the recipient, a wrong link like a 404

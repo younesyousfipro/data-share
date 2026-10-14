@@ -1,0 +1,118 @@
+/* The page takes the width that .content leaves, instead of the narrow card of the forms */
+:host {
+  width: 100%;
+  max-width: 960px;
+  align-self: flex-start;
+}
+
+.my-files {
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-files-bg);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
+}
+
+.my-files-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-bottom: var(--space-3);
+}
+
+.my-files-title {
+  margin: 0;
+  font-size: var(--font-size-title);
+  line-height: 40px;
+}
+
+.filters {
+  display: inline-flex;
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--color-files-border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 193, 145, 0.16);
+}
+
+.filter {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-black);
+  cursor: pointer;
+}
+
+.filter[aria-pressed='true'] {
+  background: var(--color-filter-active);
+  color: var(--color-white);
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* On a narrow screen the actions wrap under the file */
+.file-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: var(--space-1-5) var(--space-2);
+  border: 1px solid var(--color-files-border);
+  border-radius: var(--radius-field);
+  background: var(--color-files-row);
+}
+
+.file-row .file {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.expiry {
+  font-size: var(--font-size-small);
+}
+
+.expiring-soon {
+  color: var(--color-warning-text);
+}
+
+.expired {
+  color: var(--color-status-expired);
+}
+
+/* Black, not the mockup grey: #757575 falls under 4.5:1 on this background */
+.expired-note {
+  margin: 0;
+  font-size: var(--font-size-small);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.lock {
+  width: 20px;
+  height: 20px;
+}
+
+.access {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  text-decoration: none;
+}
+
+.access svg {
+  width: 16px;
+  height: 16px;
+}

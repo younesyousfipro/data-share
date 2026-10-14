@@ -106,8 +106,9 @@ par le proxy de dev (ci-dessous).
 Parcours disponibles : création de compte (`/register`), connexion (`/login`), puis
 upload d'un fichier sur l'accueil (`/`), réservé aux utilisateurs connectés : sans
 jeton, l'accueil renvoie vers la connexion. Le lien obtenu (`/download/<id>`) ouvre la
-page de téléchargement, **publique** : elle s'ouvre aussi sans être connecté. Pour se déconnecter en attendant l'US05,
-supprimer la clé `token` du `localStorage` (outils de développement > Application).
+page de téléchargement, **publique** : elle s'ouvre aussi sans être connecté.
+« Mon espace » (`/my-files`) liste les fichiers du compte ; « Déconnexion » ramène à
+`/login`.
 
 ### Appels à l'API : le proxy de dev
 
