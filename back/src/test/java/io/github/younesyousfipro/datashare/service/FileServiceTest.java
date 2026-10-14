@@ -29,7 +29,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -41,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -173,6 +176,68 @@ class FileServiceTest {
 		when(sharedFileRepository.findByAccountIdOrderByUploadedAtDesc(ACCOUNT_ID)).thenReturn(List.of());
 
 		assertThat(fileService.listOwnedBy(ACCOUNT_ID)).isEmpty();
+	}
+
+	@Test
+	void delete_ownFile_deletesRecordThenDiskFile() {
+		// GIVEN
+		SharedFile file = storedFile(Duration.ofDays(3), null);
+
+		// WHEN
+		fileService.delete(file.getId(), ACCOUNT_ID);
+
+		// THEN
+		InOrder order = inOrder(sharedFileRepository, fileStorage);
+		order.verify(sharedFileRepository).delete(file);
+		order.verify(fileStorage).delete(file.getId());
+	}
+
+	@Test
+	void delete_expiredFile_isDeletedToo() {
+		// GIVEN
+		SharedFile file = storedFile(Duration.ofHours(-1), null);
+
+		// WHEN
+		fileService.delete(file.getId(), ACCOUNT_ID);
+
+		// THEN
+		verify(sharedFileRepository).delete(file);
+		verify(fileStorage).delete(file.getId());
+	}
+
+	@Test
+	void delete_fileOfAnotherAccount_throwsNotFoundAndDeletesNothing() {
+		// GIVEN
+		SharedFile file = storedFile(Duration.ofDays(3), null);
+
+		// WHEN / THEN: same answer as an unknown file
+		assertThatThrownBy(() -> fileService.delete(file.getId(), 7L))
+				.isInstanceOf(SharedFileNotFoundException.class);
+		verify(sharedFileRepository, never()).delete(any());
+		verifyNoInteractions(fileStorage);
+	}
+
+	@Test
+	void delete_unknownFile_throwsNotFound() {
+		// GIVEN
+		UUID unknownId = UUID.randomUUID();
+		when(sharedFileRepository.findById(unknownId)).thenReturn(Optional.empty());
+
+		// WHEN / THEN
+		assertThatThrownBy(() -> fileService.delete(unknownId, ACCOUNT_ID))
+				.isInstanceOf(SharedFileNotFoundException.class);
+		verifyNoInteractions(fileStorage);
+	}
+
+	@Test
+	void delete_diskFailure_keepsRecordDeletedWithoutError() {
+		// GIVEN
+		SharedFile file = storedFile(Duration.ofDays(3), null);
+		doThrow(new UncheckedIOException(new IOException("disk error"))).when(fileStorage).delete(file.getId());
+
+		// WHEN / THEN: the orphan file is logged, the user still gets a success
+		fileService.delete(file.getId(), ACCOUNT_ID);
+		verify(sharedFileRepository).delete(file);
 	}
 
 	@Test
