@@ -977,3 +977,31 @@ visible ni en développement ni en démonstration. Même choix qu'à l'upload (2
 **Conséquence assumée :** reçu en `Blob`, le fichier n'apparaît dans les téléchargements
 du navigateur qu'une fois complet : sur une connexion lente, plusieurs minutes sans
 indication d'avancement. Voir `perspectives.md`.
+
+---
+
+## 2026-10-14 — Historique : onglet « Actifs » par défaut
+
+**Décidé :** « Mes fichiers » s'ouvre sur l'onglet **Actifs** (`ACTIVE` et
+`EXPIRING_SOON`). « Tous » et « Expiré » restent accessibles ; l'API renvoie tous les
+fichiers, le filtre est côté front.
+**Écarté :** ouvrir sur « Tous », comme la maquette.
+**Pourquoi :** la spécification d'US06 l'impose (« Seuls les fichiers non expirés sont
+affichés par défaut dans l'historique »). US05 (« l'ensemble des fichiers ») reste
+satisfaite par l'onglet « Tous ». La maquette montre un état de l'écran, la spécification
+fixe la règle.
+**Conséquence assumée :** écart visible avec la maquette au premier affichage.
+
+---
+
+## 2026-10-14 — Historique : expiration proche signalée sur la ligne
+
+**Décidé :** l'échéance de chaque fichier reprend les niveaux du design system : texte
+normal pour `ACTIVE`, **orange** pour `EXPIRING_SOON` (« Expire demain »), **rouge** pour
+`EXPIRED`. Même seuil et même formulation que la page de téléchargement, partagés dans
+`shared/expiry.ts`.
+**Écarté :** un 4ᵉ onglet « Expire bientôt ».
+**Pourquoi :** un onglet ne se voit qu'après un clic ; la couleur sur la ligne se voit
+tout de suite. La maquette n'a que trois onglets. Le texte porte aussi l'information,
+la couleur n'est pas seule (WCAG 1.4.1).
+**Conséquence assumée :** aucune.
