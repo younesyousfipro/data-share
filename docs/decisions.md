@@ -285,6 +285,8 @@ téléchargerait seul (demande un mécanisme de jeton supplémentaire).
 de progression fournie par Angular ; le serveur, lui, envoie bien en streaming.
 **Conséquence assumée :** le fichier entier tient dans la mémoire du navigateur (jusqu'à
 1 Go) : acceptable sur ordinateur, risqué sur mobile. À mentionner dans `PERF.md`.
+*Précisé le 2026-10-14 : la barre de progression reste possible mais n'est pas
+réalisée, voir « Téléchargement : pas de barre de progression ».*
 
 ---
 
@@ -528,6 +530,8 @@ ce qui manque et sort de la navigation au clavier. Une erreur à chaque frappe s
 « email invalide » dès la première lettre.
 **Conséquence assumée :** différent de l'écran de téléchargement protégé, où la
 maquette désactive le bouton. À trancher avec US02 : harmoniser ou garder l'écart.
+*Tranché le 2026-10-14 : harmonisé, voir « Téléchargement protégé : bouton toujours
+actif ».*
 
 ---
 
@@ -593,6 +597,8 @@ AA) exige un contraste de 4,5:1 pour un texte courant. Mesures de la maquette :
 La teinte reste la même à l'œil, seule la luminosité baisse.
 **Conséquence assumée :** écart visible, mais léger, avec les maquettes qui « doivent
 être respectées ». Un seul orange de texte pour tout le site.
+*Étendu le 2026-10-14 (US02) :* le texte du callout d'avertissement (`#AA642B`, 4,3:1
+sur son fond) prend le même `#A0561A` (5,1:1).
 
 ---
 
@@ -912,3 +918,62 @@ les refusant ; le couper avant BCrypt évite d'avoir à vérifier son comporteme
 au-delà de 72 octets. Pour l'identifiant, le `400` de Spring est exact et ne coûte rien.
 **Conséquence assumée :** le front traite `400` et `404` de la même façon (« lien
 invalide »).
+
+---
+
+## 2026-10-14 — Téléchargement protégé : bouton toujours actif
+
+**Décidé :** le bouton « Télécharger » reste actif même si le champ est vide ; à l'envoi,
+« Saisissez le mot de passe. » s'affiche sous le champ. Il n'est désactivé que pendant
+le téléchargement, comme à l'upload. Règles client = `DownloadRequestDTO` : obligatoire
+si le fichier est protégé, 18 caractères maximum.
+**Écarté :** le bouton désactivé tant que le champ est vide (maquette `02`).
+**Pourquoi :** mêmes raisons qu'aux formulaires de compte (2026-10-07) : un bouton
+désactivé n'explique pas ce qui manque et sort de la navigation au clavier. Un seul
+comportement de formulaire dans toute l'appli.
+**Conséquence assumée :** écart à la maquette.
+
+---
+
+## 2026-10-14 — Téléchargement : avis d'expiration calculé par le front
+
+**Décidé :** la **couleur** suit la règle de l'API (`EXPIRING_SOON`) : orange s'il reste
+moins de 24 h, bleu au-delà. Le **texte** compte en jours du calendrier :
+« aujourd'hui », « demain », « dans N jours ».
+**Écarté :** ajouter `status` à `FileMetadataResponse` ; un texte compté par tranches
+de 24 h.
+**Pourquoi :** la réponse publique en dit le moins possible, et `expiresAt` suffit à
+tout calculer. Le calendrier est ce qu'on lit : un fichier qui expire demain à 9 h
+expire « demain », qu'il reste 20 h ou 30 h.
+**Conséquence assumée :** les deux règles peuvent diverger (expire demain après-midi :
+« demain », en bleu). Le seuil de 24 h est écrit deux fois, dans l'API et le front.
+
+---
+
+## 2026-10-14 — Téléchargement : nom du fichier et erreurs côté front
+
+**Décidé :** le fichier est enregistré sous `originalName`, lu dans les métadonnées.
+Erreurs choisies d'après le code : `403` → « Mot de passe incorrect. » ; `400`, `404`,
+`410` → la page se réduit au message, comme au chargement (le fichier a disparu entre
+l'affichage et le clic) ; tout autre échec → message générique.
+**Écarté :** lire le nom dans l'en-tête `Content-Disposition` (encodage RFC 5987 à
+décoder).
+**Pourquoi :** le nom est déjà connu depuis le `GET`. Le fichier étant demandé en
+`Blob`, le corps d'une erreur arrive lui aussi en `Blob`, pas en JSON : lire le code
+suffit, comme aux autres écrans.
+**Conséquence assumée :** `Content-Disposition` ne sert qu'aux appels directs à l'API
+(`curl`, Postman).
+
+---
+
+## 2026-10-14 — Téléchargement : pas de barre de progression
+
+**Décidé :** pendant le téléchargement, le bouton est désactivé et « Téléchargement en
+cours… » s'affiche (`role="status"`), comme à l'upload.
+**Écarté :** une barre de progression (`reportProgress`), pourtant peu coûteuse : le
+back envoie déjà `Content-Length`.
+**Pourquoi :** en local, même 1 Go arrive en quelques secondes : la barre ne serait
+visible ni en développement ni en démonstration. Même choix qu'à l'upload (2026-10-12).
+**Conséquence assumée :** reçu en `Blob`, le fichier n'apparaît dans les téléchargements
+du navigateur qu'une fois complet : sur une connexion lente, plusieurs minutes sans
+indication d'avancement. Voir `perspectives.md`.
