@@ -61,6 +61,23 @@ class LocalFileStorageTest {
 	}
 
 	@Test
+	void read_returnsStoredContent() throws IOException {
+		// GIVEN
+		storage.store(ID, content("hello"));
+
+		// WHEN / THEN
+		try (InputStream read = storage.read(ID)) {
+			assertThat(read).hasContent("hello");
+		}
+	}
+
+	@Test
+	void read_missingFile_throws() {
+		assertThatThrownBy(() -> storage.read(ID))
+				.isInstanceOf(UncheckedIOException.class);
+	}
+
+	@Test
 	void delete_removesFile() {
 		// GIVEN
 		storage.store(ID, content("hello"));
