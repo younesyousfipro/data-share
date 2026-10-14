@@ -1,0 +1,60 @@
+<section class="card" aria-labelledby="download-title">
+  <h1 id="download-title" class="card-title">Télécharger un fichier</h1>
+
+  @if (metadata(); as metadata) {
+    <div class="download">
+      <div class="file">
+        <svg class="file-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+          <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+        </svg>
+        <p class="file-details">
+          <span class="file-name" [title]="metadata.originalName">{{ metadata.originalName }}</span>
+          <span class="file-size">{{ metadata.sizeBytes | fileSize }}</span>
+        </p>
+      </div>
+
+      @if (expiry(); as expiry) {
+        <p [class]="expiry.warning ? 'callout-warning' : 'callout-info'">{{ expiry.text }}</p>
+      }
+
+      <form class="form" [formGroup]="form" (ngSubmit)="submit(metadata)">
+        @if (serverError(); as error) {
+          <p class="callout-error" role="alert">{{ error }}</p>
+        }
+
+        @if (metadata.passwordProtected) {
+          <div class="field">
+            <label for="password">Mot de passe</label>
+            <!-- off: the file password is not the account one, the browser must not fill it in -->
+            <input
+              id="password"
+              type="password"
+              formControlName="password"
+              autocomplete="off"
+              placeholder="Saisissez le mot de passe..."
+              [attr.aria-invalid]="passwordError() !== null"
+              [attr.aria-describedby]="passwordError() ? 'password-error' : null"
+            />
+            @if (passwordError(); as error) {
+              <p id="password-error" class="field-error">{{ error }}</p>
+            }
+          </div>
+        }
+
+        <button class="button-primary download-button" type="submit" [disabled]="downloading()">
+          <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.6671 11.3333L8.00044 14L5.33378 11.3333M8.00044 14V7.99996M13.9204 12.06C14.5 11.6524 14.9347 11.0707 15.1613 10.3994C15.3879 9.72805 15.3947 9.00197 15.1807 8.32651C14.9667 7.65104 14.543 7.06135 13.9712 6.643C13.3993 6.22464 12.709 5.9994 12.0004 5.99996H11.1604C10.9599 5.21854 10.5848 4.49279 10.0632 3.87734C9.54161 3.2619 8.88721 2.7728 8.14925 2.44686C7.41129 2.12092 6.60901 1.96664 5.80279 1.99563C4.99658 2.02463 4.20745 2.23614 3.49481 2.61424C2.78217 2.99234 2.16459 3.52719 1.68857 4.17851C1.21254 4.82983 0.890478 5.58065 0.746618 6.37445C0.602757 7.16826 0.64085 7.98435 0.85803 8.7613C1.07521 9.53825 1.46582 10.2558 2.00044 10.86" />
+          </svg>
+          Télécharger
+        </button>
+        <!-- Always in the page, so that screen readers announce the message when it appears -->
+        <p class="download-status" role="status">{{ downloadStatus() }}</p>
+      </form>
+    </div>
+  } @else if (unavailableMessage(); as message) {
+    <p class="callout-error" role="alert">{{ message }}</p>
+  } @else {
+    <p class="loading" role="status">Chargement…</p>
+  }
+</section>

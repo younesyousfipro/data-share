@@ -110,3 +110,11 @@ et ne touchent pas aux fichiers de dev.
 | `file.service.spec.ts` | unitaire | `POST /api/files` en multipart : fichier, mot de passe, durée · aucun champ `password` si le mot de passe est vide |
 | `file-size.pipe.spec.ts` | unitaire | octets, puis Ko, Mo, Go par paliers de 1024, une décimale à la française |
 | `upload.spec.ts` | unitaire | accueil, sélecteur ouvert par « Choisir » et « Changer » · nom et taille du fichier · annulation du sélecteur : fichier conservé · 1 Go pile accepté, 1 Go + 1 octet refusé (bouton désactivé) · dernière extension interdite refusée quelle que soit la casse, `.exe.zip` et fichier sans extension acceptés · 7 jours par défaut · envoi du mot de passe et de la durée choisis · mot de passe de 5 ou 19 caractères refusé · fichier refusé jamais envoyé · double clic : une seule requête, message d'envoi · durée de conservation annoncée · lien `/download/<id>` affiché et copié, message si la copie est refusée · « Envoyer un autre fichier » : formulaire vierge · `413`, `400`, autre erreur : message adapté, nouvel essai possible |
+
+### US02 — Téléchargement (front)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `download.service.spec.ts` | unitaire | `GET /api/download/<id>` : métadonnées · `POST` avec le mot de passe, réponse lue en `Blob` · aucun champ `password` si le mot de passe est vide |
+| `save-file.spec.ts` | unitaire | lien cliqué avec le nom du fichier · URL `blob:` libérée après le clic, pas avant |
+| `download.spec.ts` | unitaire, vrai routeur, horloge figée | identifiant lu dans l'URL · chargement annoncé · nom et taille · avis d'expiration : bleu au-delà de 24 h, orange en dessous, « aujourd'hui » / « demain » / « dans 3 jours » comptés en jours du calendrier · `410` : carte réduite au message · `404` et `400` : lien invalide · autre erreur : message générique · fichier non protégé : pas de champ, enregistré sous son nom · mot de passe envoyé · champ vide ou de 19 caractères : erreur sous le champ, bouton actif, aucun appel · bouton désactivé pendant le téléchargement · `403` : mot de passe incorrect, fichier toujours affiché · `410` au clic : carte réduite au message |

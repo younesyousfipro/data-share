@@ -240,12 +240,12 @@ suit, une fois la route vérifiée.
 ### Front — par écran
 
 ```
-styles.css    design tokens + classes partagées : .card, .field, .button-primary, .callout-error, .callout-info…
+styles.css    design tokens + classes partagées : .card, .field, .button-primary, .callout-*, .file (icône, nom, taille)…
 app/
   app.*       coquille commune : <app-header>, <router-outlet>, footer
-  core/       api.models, auth.service, file.service, auth.interceptor (ajoute le JWT), auth.guard (réserve une page aux connectés)
+  core/       api.models, auth.service, file.service (propriétaire), download.service (public), auth.interceptor (ajoute le JWT), auth.guard (réserve une page aux connectés)
   features/   auth/ (register/, login/) · upload/ · download/ · my-files/
-  shared/     ce que plusieurs écrans réutilisent : header/ (« Se connecter » ou « Mon espace ») · file-size.pipe (« 2,6 Mo »)
+  shared/     ce que plusieurs écrans réutilisent : header/ (« Se connecter » ou « Mon espace ») · file-size.pipe (« 2,6 Mo ») · save-file (enregistre un fichier reçu)
 ```
 
 Un élément **sans comportement** (bouton, champ, carte) est une classe CSS ; il ne
@@ -558,6 +558,28 @@ DownloadController ─► FileService.download ─► contrôles (404, 410, 403)
 
 Toujours `application/octet-stream`, quel que soit le fichier : avec l'en-tête `nosniff`,
 le navigateur l'enregistre sans jamais l'afficher ni l'exécuter.
+
+#### Côté front : une page, quatre états
+
+La page `/download/:id` n'a pas de guard. Son état se déduit de deux signaux :
+`metadata` (réponse du `GET`) et `unavailableMessage` (son échec).
+
+| `metadata` | `unavailableMessage` | Affichage |
+|---|---|---|
+| vide | vide | « Chargement… » |
+| rempli | — | nom, taille, avis d'expiration, champ mot de passe si protégé, bouton |
+| vide | rempli | carte réduite au message : expiré (`410`) ou lien invalide (`404`, `400`) |
+
+Un `400`, `404` ou `410` reçu **au clic** vide `metadata` : la page rejoint le même état
+qu'au chargement. Un `403` laisse la page en place avec « Mot de passe incorrect. ».
+
+```
+DownloadService.download ─► Blob (fichier entier en mémoire)
+  └─► saveFile(blob, originalName) : URL blob:, lien <a download> cliqué, URL libérée
+```
+
+Le nom vient des métadonnées, pas de `Content-Disposition` ; les erreurs sont lues par
+leur code, le corps d'une erreur arrivant lui aussi en `Blob` (décisions du 2026-10-14).
 
 ### Suppression (US06)
 
