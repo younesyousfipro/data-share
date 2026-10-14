@@ -4,7 +4,20 @@
   gap: var(--space-3);
 }
 
-.loading {
+.download-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.download-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.loading,
+.download-status {
   margin: 0;
   font-size: var(--font-size-small);
   text-align: center;
