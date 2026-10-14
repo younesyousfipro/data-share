@@ -998,10 +998,44 @@ fixe la règle.
 
 **Décidé :** l'échéance de chaque fichier reprend les niveaux du design system : texte
 normal pour `ACTIVE`, **orange** pour `EXPIRING_SOON` (« Expire demain »), **rouge** pour
-`EXPIRED`. Même seuil et même formulation que la page de téléchargement, partagés dans
-`shared/expiry.ts`.
+`EXPIRED`. La couleur suit le `status` renvoyé par l'API (seuil de 24 h calculé par le
+back, une seule source) ; le texte (« demain », « dans 2 jours ») est calculé comme sur
+la page de téléchargement, avec la même fonction de `shared/expiry.ts`.
 **Écarté :** un 4ᵉ onglet « Expire bientôt ».
 **Pourquoi :** un onglet ne se voit qu'après un clic ; la couleur sur la ligne se voit
 tout de suite. La maquette n'a que trois onglets. Le texte porte aussi l'information,
 la couleur n'est pas seule (WCAG 1.4.1).
 **Conséquence assumée :** aucune.
+
+---
+
+## 2026-10-14 — « Mes fichiers » : maquette simplifiée
+
+**Décidé :** la liste est un panneau large posé sur le dégradé commun, sous le même
+header que les autres écrans. Pas de barre latérale, pas de tiroir mobile, pas de menu
+« ⋮ » en mobile : les boutons passent sous le fichier. Chaque ligne ajoute la **taille**
+et la **date d'envoi**, absentes de la maquette.
+**Écarté :** la mise en page propre à cet écran (barre latérale, fond uni, tiroir).
+**Pourquoi :** la barre latérale n'a qu'un lien, « Mes fichiers », déjà atteint par
+« Mon espace » : elle et son tiroir mobile n'apporteraient qu'une 2ᵉ mise en page à
+maintenir. La spécification d'US05 exige nom, taille, date d'envoi, date d'expiration et
+état ; la maquette n'en montre que trois.
+Le header connecté est le même partout : « Mon espace » et « Déconnexion » ;
+« Ajouter des fichiers » est un bouton de la page.
+**Conséquence assumée :** l'écran ressemble moins à la maquette. Deux textes passent en
+noir pour le contraste (4,5:1) : la note d'un fichier expiré (gris de la maquette) et
+« Déconnexion » (orange de la maquette, 3,2:1 sur le dégradé).
+
+---
+
+## 2026-10-14 — « Mes fichiers » : onglets en boutons à bascule
+
+**Décidé :** « Tous / Actifs / Expiré » sont trois `<button aria-pressed>` dans un
+`role="group"`. L'onglet choisi passe en `#C0453A`, texte blanc (≈ 5:1).
+**Écarté :** le motif ARIA « tabs » (`tablist`, `tab`, `tabpanel`, navigation aux
+flèches) ; le `#E77A6E` de la maquette.
+**Pourquoi :** les trois choix filtrent **une même liste**, ils n'ouvrent pas trois
+panneaux : c'est un filtre, et un bouton à bascule le dit tel quel. Le lecteur d'écran
+annonce « Actifs, bouton, enfoncé » ; `Tab` et `Entrée` suffisent, sans gestion du
+clavier à écrire. Blanc sur `#E77A6E` : 2,8:1, sous le minimum de 4,5:1 (WCAG 1.4.3).
+**Conséquence assumée :** onglet actif plus sombre que la maquette.

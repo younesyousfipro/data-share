@@ -125,3 +125,12 @@ et ne touchent pas aux fichiers de dev.
 | `download.service.spec.ts` | unitaire | `GET /api/download/<id>` : métadonnées · `POST` avec le mot de passe, réponse lue en `Blob` · aucun champ `password` si le mot de passe est vide |
 | `save-file.spec.ts` | unitaire | lien cliqué avec le nom du fichier · URL `blob:` libérée après le clic, pas avant |
 | `download.spec.ts` | unitaire, vrai routeur, horloge figée | identifiant lu dans l'URL · chargement annoncé · nom et taille · avis d'expiration : bleu au-delà de 24 h, orange en dessous, « aujourd'hui » / « demain » / « dans 3 jours » comptés en jours du calendrier · `410` : carte réduite au message · `404` et `400` : lien invalide · autre erreur : message générique · fichier non protégé : pas de champ, enregistré sous son nom · mot de passe envoyé · champ vide ou de 19 caractères : erreur sous le champ, bouton actif, aucun appel · bouton désactivé pendant le téléchargement · `403` : mot de passe incorrect, fichier toujours affiché · `410` au clic : carte réduite au message |
+
+### US05 — Historique (front)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `file.service.spec.ts` | unitaire | `GET /api/files`, sans identifiant de compte |
+| `expiry.spec.ts` | unitaire | « aujourd'hui » / « demain » / « dans 2 jours » comptés en jours du calendrier · jour de 23 h au passage à l'heure d'été · seuil des 24 h |
+| `my-files.spec.ts` | unitaire, vrai routeur, horloge figée | liste demandée au chargement · chargement annoncé · nom, taille, date d'envoi, échéance · ordre de l'API conservé · couleur d'après le `status` de l'API : aucune, orange, rouge · « Accéder » vers `/download/<id>`, nommé d'après le fichier · fichier expiré : aucune action, message · cadenas seulement si protégé · onglet « Actifs » par défaut (`EXPIRING_SOON` compris), « Tous », « Expiré » · onglet vide ou compte sans fichier : message · erreur : message générique · « Ajouter des fichiers » vers `/` |
+| `header.spec.ts` | unitaire | « Déconnexion » : `logout` appelé, redirection vers `/login` · absent si déconnecté |
