@@ -1,5 +1,6 @@
 package io.github.younesyousfipro.datashare.mapper;
 
+import io.github.younesyousfipro.datashare.dto.FileMetadataResponseDTO;
 import io.github.younesyousfipro.datashare.dto.FileResponseDTO;
 import io.github.younesyousfipro.datashare.dto.FileStatus;
 import io.github.younesyousfipro.datashare.model.SharedFile;
@@ -22,6 +23,14 @@ public class FileMapper {
 				file.getUploadedAt(),
 				file.getExpiresAt(),
 				statusOf(file.getExpiresAt()),
+				file.getPasswordHash() != null);
+	}
+
+	public FileMetadataResponseDTO toMetadataResponse(SharedFile file) {
+		return new FileMetadataResponseDTO(
+				file.getOriginalName(),
+				file.getSizeBytes(),
+				file.getExpiresAt(),
 				file.getPasswordHash() != null);
 	}
 
