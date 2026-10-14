@@ -31,3 +31,14 @@ export interface FileResponse {
   status: FileStatus;
   passwordProtected: boolean;
 }
+
+export interface FileMetadataResponse {
+  originalName: string;
+  sizeBytes: number;
+  expiresAt: string;
+  passwordProtected: boolean;
+}
+
+export interface DownloadRequest {
+  password?: string;
+}
