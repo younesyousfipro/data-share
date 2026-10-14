@@ -17,4 +17,9 @@ export class FileService {
     }
     return this.http.post<FileResponse>('/api/files', body);
   }
+
+  // No account id to send: the API reads it in the JWT added by the interceptor
+  list(): Observable<FileResponse[]> {
+    return this.http.get<FileResponse[]>('/api/files');
+  }
 }

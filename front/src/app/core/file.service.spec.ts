@@ -52,4 +52,15 @@ describe('FileService', () => {
     expect((call.request.body as FormData).has('password')).toBe(false);
     call.flush(null);
   });
+
+  it('list should GET the files of the logged-in account', () => {
+    let received: FileResponse[] | undefined;
+
+    service.list().subscribe((files) => (received = files));
+
+    const call = httpMock.expectOne('/api/files');
+    expect(call.request.method).toBe('GET');
+    call.flush([]);
+    expect(received).toEqual([]);
+  });
 });
