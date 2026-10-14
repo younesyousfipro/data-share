@@ -119,11 +119,11 @@ technique. C'est le back qui transforme chaque refus en réponse claire (`400`, 
 
 | Package | Contient | Rôle |
 |---|---|---|
-| `controller/` | `AuthController`, `FileController` | reçoit la requête HTTP, appelle le service, renvoie la réponse et son code (201 créé, 404 introuvable…) |
+| `controller/` | `AuthController`, `FileController` (propriétaire, JWT), `DownloadController` (destinataire, public) | reçoit la requête HTTP, appelle le service, renvoie la réponse et son code (201 créé, 404 introuvable…). Un controller par préfixe de route, donc par niveau d'accès |
 | `service/` | `AuthService`, `FileService`, `JwtService`, `FilePurgeService` | règles métier et validation serveur |
 | `repository/` | `AccountRepository`, `SharedFileRepository` | lecture et écriture en base (Spring Data JPA) : le CRUD est hérité de `JpaRepository` ; une requête de plus se déclare par le nom de la méthode (`findByEmail`), Spring écrit le SQL |
 | `model/` | `Account`, `SharedFile` | entités JPA, le reflet des tables ; jamais renvoyées au client. `SharedFile` porte l'id de son propriétaire (`accountId`), sans relation JPA vers `Account` |
-| `dto/` | objets d'entrée et de sortie, suffixés `DTO` (`RegisterRequestDTO`) ; l'énumération `FileStatus` | la forme exacte des données échangées avec le front. `FileStatus` est le type du champ `status`, jamais envoyé seul : il fait partie du contrat, d'où ce package, mais n'est pas un DTO, d'où l'absence de suffixe |
+| `dto/` | objets d'entrée et de sortie, suffixés `DTO` (`RegisterRequestDTO`) ; l'énumération `FileStatus` | la forme exacte des données échangées avec le front. `FileStatus` est le type du champ `status`, jamais envoyé seul : il fait partie du contrat, d'où ce package, mais n'est pas un DTO, d'où l'absence de suffixe. Seul `FileContentDTO` (nom, taille, flux du fichier) ne sort jamais en JSON : il passe du service au controller, qui en fait la réponse binaire |
 | `mapper/` | `FileMapper`, écrit à la main | convertit une entité en DTO. Ajoute des champs **calculés**, absents des tables : le statut, déduit de `expires_at` comparée à l'heure actuelle ; « protégé » (oui / non), qui fait afficher le cadenas et le champ mot de passe, déduit de `password_hash` sans jamais envoyer ce hash au front |
 | `storage/` | `FileStorage`, `LocalFileStorage` | écrit, lit et efface un fichier sur le disque, sans rien décider : ce sont les services qui choisissent quoi effacer (`FileService` pour la suppression US06, `FilePurgeService` pour la purge) |
 | `configuration/` | `SpringSecurityConfig` | routes publiques ou protégées ; fabrique les outils de sécurité (BCrypt, signature et vérification du JWT) |
@@ -534,7 +534,7 @@ sequenceDiagram
   F-->>R: métadonnées, champ mot de passe si protégé
   R->>F: clique sur Télécharger
   F->>A: POST /api/download/UUID, mot de passe dans le corps
-  A->>A: expiré ? sinon 410. Mot de passe correct (BCrypt) ? sinon 403
+  A->>A: inconnu ? 404. Expiré ? 410. Mot de passe faux (BCrypt) ? 403
   A->>D: lit le fichier
   A-->>F: fichier en streaming, nom d'origine
   F-->>R: enregistrement du fichier
@@ -542,6 +542,22 @@ sequenceDiagram
 
 Mot de passe en `POST`, **jamais dans l'URL** : une URL finit dans les logs du
 serveur et l'historique du navigateur.
+
+Ordre des contrôles, commun aux deux routes (décision du 2026-10-14) : inconnu, puis
+expiré ; le mot de passe n'est vérifié qu'au `POST`. Le fichier n'est ouvert sur le
+disque qu'**après** ces contrôles : une fois ouvert, plus rien ne peut échouer avant que
+Spring l'envoie puis le ferme.
+
+```
+DownloadController ─► FileService.download ─► contrôles (404, 410, 403)
+                                          └─► FileStorage.read : fichier ouvert, pas lu
+       ◄── FileContentDTO (nom, taille, flux)
+       └─► réponse : Content-Disposition (nom d'origine, UTF-8), application/octet-stream,
+                     contenu copié par Spring morceau par morceau, puis flux fermé
+```
+
+Toujours `application/octet-stream`, quel que soit le fichier : avec l'en-tête `nosniff`,
+le navigateur l'enregistre sans jamais l'afficher ni l'exécuter.
 
 ### Suppression (US06)
 

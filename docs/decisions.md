@@ -884,3 +884,31 @@ design system) qui ramène à l'accueil avec un formulaire vierge.
 **Pourquoi :** sans lui, le parcours se termine en impasse : le logo mène à `/`, la page
 déjà affichée, et il faudrait recharger la page pour envoyer un second fichier.
 **Conséquence assumée :** écart à la maquette, ajout d'un élément absent du design.
+
+---
+
+## 2026-10-14 — Téléchargement : ordre des contrôles
+
+**Décidé :** fichier inconnu → `404`, puis expiré → `410`, puis (au téléchargement
+seulement) mot de passe absent ou faux → `403`. La consultation des métadonnées
+(`GET`) s'arrête après le `410`.
+**Écarté :** vérifier le mot de passe avant l'expiration.
+**Pourquoi :** un fichier expiré est perdu pour tout le monde : inutile de demander un
+mot de passe pour annoncer qu'il n'existe plus. Le `410` ne révèle rien du contenu.
+**Conséquence assumée :** un fichier expiré se signale comme tel à quiconque a le lien,
+mot de passe connu ou non.
+
+---
+
+## 2026-10-14 — Téléchargement : requêtes mal formées refusées en `400`
+
+**Décidé :** un mot de passe de plus de 18 caractères (`@Size(max = 18)` sur
+`DownloadRequestDTO`) et un identifiant qui n'est pas un UUID (`/api/download/abc`)
+reçoivent un `400`, sans code de notre part pour le second (comportement de Spring).
+**Écarté :** laisser BCrypt comparer un mot de passe trop long ; répondre `404` pour un
+identifiant mal formé.
+**Pourquoi :** un mot de passe de plus de 18 caractères est forcément faux, l'upload
+les refusant ; le couper avant BCrypt évite d'avoir à vérifier son comportement
+au-delà de 72 octets. Pour l'identifiant, le `400` de Spring est exact et ne coûte rien.
+**Conséquence assumée :** le front traite `400` et `404` de la même façon (« lien
+invalide »).

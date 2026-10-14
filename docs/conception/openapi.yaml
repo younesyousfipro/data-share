@@ -171,6 +171,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FileMetadataResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '410':
@@ -196,10 +198,10 @@ paths:
           description: File content, streamed
           headers:
             Content-Disposition:
-              description: Original file name
+              description: Original file name, UTF-8 encoded (RFC 5987)
               schema:
                 type: string
-                example: attachment; filename="vacances.mp4"
+                example: attachment; filename*=UTF-8''vacances.mp4
           content:
             application/octet-stream:
               schema:
@@ -213,6 +215,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '410':
@@ -398,7 +402,10 @@ components:
       properties:
         password:
           type: string
-          description: Required only when the file is protected.
+          maxLength: 18
+          description: |
+            Required only when the file is protected. Longer than 18 characters
+            gives a 400: the upload never accepts such a password.
           example: secret1
 
     ErrorDetails:

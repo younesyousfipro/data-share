@@ -184,6 +184,27 @@ curl -i http://localhost:8080/api/files \
 | `401` | jeton absent, falsifié ou expiré (corps vide) |
 | `413` | fichier de plus de 1 Go |
 
+Télécharger un fichier (US02), sans jeton : `ID` est l'`id` renvoyé par l'upload.
+
+```bash
+ID=3f2b9c1e-...
+curl -i http://localhost:8080/api/download/$ID          # métadonnées
+curl -X POST http://localhost:8080/api/download/$ID \
+  -H "Content-Type: application/json" \
+  -d '{"password": "s3cret"}' \
+  -o fichier-recu                                       # fichier
+```
+
+Sans mot de passe sur le fichier, le second appel se fait sans `-H` ni `-d`.
+
+| Code | Signification |
+|---|---|
+| `200` | métadonnées (nom, taille, expiration, protégé ou non), ou le fichier |
+| `400` | identifiant qui n'est pas un UUID, mot de passe de plus de 18 caractères |
+| `403` | mot de passe absent ou faux |
+| `404` | lien inconnu |
+| `410` | fichier expiré |
+
 Les erreurs ont toutes le même format JSON (`timestamp`, `message`, `details`), sauf le
 `401` des routes protégées, à corps vide.
 

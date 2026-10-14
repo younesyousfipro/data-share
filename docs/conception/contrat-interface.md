@@ -43,7 +43,7 @@ jamais la valeur saisie.
 
 | Code | Quand |
 |---|---|
-| `400` | validation échouée : extension interdite, mot de passe trop court, durée hors de 1-7 jours… |
+| `400` | validation échouée : extension interdite, mot de passe trop court, durée hors de 1-7 jours, identifiant de fichier qui n'est pas un UUID… |
 | `401` | JWT absent ou expiré · identifiants refusés (même message si l'email ou le mot de passe est faux) |
 | `403` | mot de passe de fichier absent ou faux — pas `401`, que l'intercepteur front traite comme une session expirée |
 | `404` | fichier inconnu, **ou appartenant à un autre compte** (son existence n'est pas révélée) |
@@ -58,7 +58,7 @@ jamais la valeur saisie.
 | email | format valide, 254 caractères maximum, unique, casse ignorée (enregistré en minuscules) |
 | mot de passe du compte | 8 à 18 caractères (18 × 4 octets au pire = 72, la limite de BCrypt) |
 | fichier | 1 Go maximum · nom obligatoire, 255 caractères maximum · extensions refusées : `exe`, `bat`, `cmd`, `com`, `msi`, `sh`, `ps1`, `vbs`, `jar` (casse ignorée, dernière extension seule) |
-| mot de passe du fichier | optionnel, 6 à 18 caractères (même limite BCrypt que le compte) |
+| mot de passe du fichier | optionnel, 6 à 18 caractères (même limite BCrypt que le compte) · au téléchargement : 18 caractères maximum |
 | `expirationDays` | entier de 1 à 7, défaut 7 |
 
 ## Structures de données
