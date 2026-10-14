@@ -18,6 +18,7 @@ export class MyFiles {
   protected readonly files = signal<FileResponse[] | null>(null);
   protected readonly loadFailed = signal(false);
   protected readonly deleteFailed = signal(false);
+  protected readonly deletedName = signal<string | null>(null);
 
   protected readonly filters: { value: Filter; label: string }[] = [
     { value: 'ALL', label: 'Tous' },
@@ -55,9 +56,13 @@ export class MyFiles {
       return;
     }
     this.deleteFailed.set(false);
+    this.deletedName.set(null);
     this.fileService.delete(file.id).subscribe({
       // The row goes away without reloading the list: the API already removed it
-      next: () => this.files.update((files) => files!.filter((other) => other.id !== file.id)),
+      next: () => {
+        this.files.update((files) => files!.filter((other) => other.id !== file.id));
+        this.deletedName.set(file.originalName);
+      },
       error: () => this.deleteFailed.set(true),
     });
   }

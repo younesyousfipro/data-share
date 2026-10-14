@@ -94,7 +94,7 @@ describe('MyFiles', () => {
 
     await openPage();
 
-    expect(page.querySelector('[role="status"]')?.textContent).toContain('Chargement');
+    expect(page.querySelector('p[role="status"]')?.textContent).toContain('Chargement');
   });
 
   it('should show the name, size, upload date and expiry of each file', async () => {
@@ -151,14 +151,16 @@ describe('MyFiles', () => {
     expect(access.getAttribute('aria-label')).toBe('Accéder à vacances.mp4');
   });
 
-  it('should offer no action on an expired file, only say it is gone', async () => {
-    list.mockReturnValue(of([file({ status: 'EXPIRED' })]));
+  it('should offer only the deletion on an expired file, and say it is gone', async () => {
+    list.mockReturnValue(of([file({ status: 'EXPIRED', passwordProtected: true })]));
 
     await openPage();
     await showFilter('Expiré');
 
     const row = rows()[0];
-    expect(row.querySelector('a, button')).toBeNull();
+    expect(row.querySelector('a')).toBeNull();
+    expect(row.querySelector('.lock')).toBeNull();
+    expect(row.querySelector('button.delete')).not.toBeNull();
     expect(row.querySelector('.expired-note')?.textContent).toBe(
       "Ce fichier a expiré, il n'est plus stocké chez nous",
     );
@@ -245,6 +247,10 @@ describe('MyFiles', () => {
       await harness.fixture.whenStable();
     }
 
+    function deletionStatus(): string | undefined {
+      return page.querySelector('div[role="status"]')?.textContent?.trim();
+    }
+
     it('should name the file on the delete button of an available file', async () => {
       await openPage();
 
@@ -273,6 +279,7 @@ describe('MyFiles', () => {
 
       expect(deleteFile).toHaveBeenCalledWith('1');
       expect(names()).toEqual(['b.txt']);
+      expect(deletionStatus()).toBe('« a.txt » a été supprimé.');
       expect(page.querySelector('[role="alert"]')).toBeNull();
     });
 
@@ -287,6 +294,7 @@ describe('MyFiles', () => {
       expect(page.querySelector('[role="alert"]')?.textContent).toBe(
         'La suppression a échoué, veuillez réessayer.',
       );
+      expect(deletionStatus()).toBe('');
     });
   });
 
