@@ -17,7 +17,7 @@ réécrire si le prototype est retenu). Le détail de chaque arbitrage est dans
 | Stockage fichiers | **disque local** | AWS S3, MinIO | immédiat, sans compte ni coût |
 | Envoi des fichiers | **`multipart/form-data`** | JSON + base64 | octets bruts, standard du web, géré de bout en bout par Angular et Spring |
 | Authentification | **JWT** + BCrypt | sessions serveur | API sans état, exigé par le brief |
-| Tests | JUnit, Mockito, Testcontainers · Vitest · Cypress · k6 | Jest (front) | un outil par niveau de test ; Vitest est fourni par Angular |
+| Tests | JUnit, Mockito, Testcontainers · Vitest · Cypress · k6 | Jest (front), Selenium (E2E) | un outil par niveau de test ; Vitest est fourni par Angular |
 
 ---
 
@@ -122,7 +122,7 @@ octets bruts. Détail de la requête dans
 | Unitaire back | JUnit + Mockito | la logique des services, isolée de la base |
 | Intégration back | Testcontainers | l'API sur un vrai PostgreSQL, migré par Flyway |
 | Unitaire front | Vitest | composants et services Angular |
-| Bout en bout | Cypress | les parcours critiques dans un navigateur |
+| Bout en bout | Cypress | les parcours critiques dans un navigateur, sur la vraie application (rien n'est simulé) |
 | Charge | k6 | le temps de réponse d'un endpoint critique |
 
 **En production** : ces tests tournent dans le pipeline CI à chaque commit ;
