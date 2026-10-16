@@ -5,6 +5,10 @@ stories, puis résultats des scans. Détail technique :
 [`architecture.md`](docs/conception/architecture.md) ; raison de chaque choix :
 [`decisions.md`](docs/decisions.md).
 
+**Sommaire** : [Politique de sécurité](#politique-de-sécurité-de-lapplication) ·
+[Scan des dépendances](#scan-des-dépendances) · mise à jour des dépendances :
+[`MAINTENANCE.md`](MAINTENANCE.md)
+
 ## Politique de sécurité de l'application
 
 ### Authentification et accès
@@ -79,7 +83,55 @@ section « Sécurité : rôle de chaque couche ».
 | Mot de passe limité à 18 caractères | sous les 64 recommandés par l'OWASP et le NIST | compter les octets, ou Argon2 |
 | HTTP en développement | aucun chiffrement | reverse proxy HTTPS ([`perspectives.md`](docs/perspectives.md)) |
 
-## Scan de sécurité
+## Scan des dépendances
 
-*À venir* : `npm audit` (front) et `trivy` (dépendances back et front), avec les
-résultats, leur analyse et les décisions prises.
+Dernier scan : **16 octobre 2026**. Le relancer : [`MAINTENANCE.md`](MAINTENANCE.md).
+
+### En bref
+
+| Cible | Avant correction | Après |
+|---|---|---|
+| Front, `npm audit` (580 paquets, dont 12 livrés au navigateur) | 0 faille | 0 |
+| Front, Trivy | 0 faille | 0 |
+| **Back, Trivy** | **10 failles** : 3 CRITICAL, 5 HIGH, 2 MEDIUM | **0** |
+| Secrets dans le dépôt, Trivy | 0 | 0 |
+
+### Outils
+
+Un scanner ne lance pas l'application : il liste les bibliothèques utilisées, versions
+exactes et dépendances indirectes comprises (`package-lock.json`, `pom.xml`), et les
+compare à une base de failles publiées (CVE).
+
+| Outil | Analyse | Pourquoi lui |
+|---|---|---|
+| `npm audit` | dépendances du front | fourni avec npm ; `--omit=dev` isole ce qui part dans le navigateur |
+| Trivy 0.75.0 | dépendances du back et du front, secrets | seul des deux à lire Maven ; cité par la consigne |
+
+**Trivy lui-même est une dépendance à risque** : en mars 2026, des versions piégées
+(0.69.4 à 0.69.6) ont volé les secrets des machines qui les lançaient. Il tourne donc
+dans Docker, en version figée par son empreinte (`sha256`), avec le dépôt monté en
+lecture seule. Alternatives écartées : [`decisions.md`](docs/decisions.md).
+
+### Failles trouvées et décisions
+
+Toutes dans le back, dans deux bibliothèques fournies par Spring Boot 4.1.1 :
+
+| Bibliothèque | Failles | Atteignable chez nous ? | Décision |
+|---|---|---|---|
+| Tomcat 11.0.24 (serveur web embarqué) | 3 CRITICAL : contournement de ses règles d'accès et de ses authentifications DIGEST et FORM | **non** : ces mécanismes ne sont pas utilisés, l'accès est contrôlé par Spring Security et le JWT | mise à jour en 11.0.25 : correctif sans coût, et l'exposition dépend d'une configuration qui peut changer |
+| Jackson 3.1.5 (lecture du JSON des requêtes) | 5 HIGH, 2 MEDIUM : déni de service par un JSON piégé | **oui** : `/api/auth/**` lit du JSON envoyé sans compte | mise à jour en 3.1.7 |
+
+**Correction** : Spring Boot fixe ces versions, et sa version corrective (4.1.2) n'est
+pas encore publiée. `pom.xml` redéfinit donc `tomcat.version` et `jackson-bom.version`,
+mécanisme prévu par Spring Boot, à retirer au passage à 4.1.2.
+
+**Vérification** : 93 tests back passés ; le `.jar` livré contient
+`tomcat-embed-core-11.0.25` et `jackson-databind-3.1.7` ; nouveau scan à 0 faille.
+
+### Ce que le scan ne couvre pas
+
+| Angle mort | Conséquence |
+|---|---|
+| failles pas encore publiées | un scan à 0 vaut pour ce jour-là : d'où un scan régulier ([`MAINTENANCE.md`](MAINTENANCE.md)) |
+| secrets de format inconnu | la clé JWT, chaîne aléatoire, ne serait pas reconnue : elle est protégée par `.gitignore`, pas par le scan |
+| notre propre code | seules les bibliothèques sont analysées ; l'analyse du code (SAST, par exemple SonarQube) est un autre outil |

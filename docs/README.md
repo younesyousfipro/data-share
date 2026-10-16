@@ -10,6 +10,7 @@
 | [`conception/choix-techno.md`](conception/choix-techno.md) | justification de la stack |
 | [`perspectives.md`](perspectives.md) | évolutions prévues pour une mise en production |
 | [`../SECURITY.md`](../SECURITY.md) | politique de sécurité, limites connues, scans |
+| [`../MAINTENANCE.md`](../MAINTENANCE.md) | mise à jour des dépendances : procédure, fréquence, risques |
 | [`brief/`](brief/) | énoncé et spécifications d'origine |
 
 **Ordre de lecture conseillé** : `use-cases.md` → `modele-donnees.md` →
