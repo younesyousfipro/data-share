@@ -1,13 +1,13 @@
+import { ACCOUNT_PASSWORD, uniqueEmail } from '../support/api';
+
 describe('Share a file', () => {
-  // A fresh account on every run: the test never depends on what the database already holds
-  const email = `e2e-${Date.now()}@test.local`;
-  const password = 'e2e-password';
+  const email = uniqueEmail();
 
   it('creates an account, logs in and gets a download link', () => {
     cy.visit('/register');
     cy.get('#email').type(email);
-    cy.get('#password').type(password);
-    cy.get('#confirm-password').type(password);
+    cy.get('#password').type(ACCOUNT_PASSWORD);
+    cy.get('#confirm-password').type(ACCOUNT_PASSWORD);
     cy.contains('button', 'Créer mon compte').click();
 
     cy.location('pathname').should('eq', '/login');
@@ -18,7 +18,7 @@ describe('Share a file', () => {
     cy.contains('button', 'Connexion').click();
     cy.contains('[role="alert"]', 'Email ou mot de passe incorrect.');
 
-    cy.get('#password').clear().type(password);
+    cy.get('#password').clear().type(ACCOUNT_PASSWORD);
     cy.contains('button', 'Connexion').click();
     cy.location('pathname').should('eq', '/');
 
