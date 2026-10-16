@@ -52,11 +52,39 @@ et upload des scénarios 2 et 3) est préparé par l'API (`cypress/support/api.t
 **Hors E2E** : l'expiration (`410`) demanderait d'attendre des jours ; elle est couverte
 en unitaire et en intégration.
 
+**Résultats** (exécution du 2026-10-16) : 3 scénarios sur 3 passent, en 3 secondes.
+
+![Résultat de npm run e2e, suppression et téléchargement](docs/captures/e2e-resultats-1.png)
+
+![Résultat de npm run e2e, partage et bilan](docs/captures/e2e-resultats-2.png)
+
+<details>
+<summary>Détail de chaque scénario dans l'interface Cypress</summary>
+
+![Partager un fichier](docs/captures/e2e-partager.png)
+
+![Télécharger un fichier protégé](docs/captures/e2e-telecharger.png)
+
+![Supprimer un fichier](docs/captures/e2e-supprimer.png)
+
+</details>
+
 ## Couverture
 
 Seuil de **70 %** sur les quatre métriques (instructions, lignes, branches, méthodes),
 mesuré **séparément** pour le back (JaCoCo) et le front (Vitest). Sous le seuil, la
 commande échoue (décision du 2026-10-07).
+
+**Résultats** (mesure du 2026-10-16) :
+
+| | Instructions | Branches | Lignes | Méthodes |
+|---|---|---|---|---|
+| Back (JaCoCo) | 96 % | 94 % | 96 % | 98 % |
+| Front (Vitest, 125 tests) | 99,7 % | 98 % | 99,6 % | 100 % |
+
+![Rapport JaCoCo du back](docs/captures/couverture-back.png)
+
+![Rapport Vitest du front](docs/captures/couverture-front.png)
 
 **Exclu de la mesure** — uniquement du code sans logique :
 
