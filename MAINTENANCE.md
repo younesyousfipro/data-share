@@ -18,6 +18,7 @@ Résultats du dernier scan : [`SECURITY.md`](SECURITY.md).
 | PostgreSQL | 18 | `back/compose.yaml` | image Docker |
 | Trivy | 0.75.0 | commande de scan (ci-dessous) | figé par son empreinte, mis à jour à la main |
 | k6 | 2.3.0 | commande de test ([`PERF.md`](PERF.md)) | idem |
+| nginx | 1.30.6 | commande de mesure Lighthouse ([`PERF.md`](PERF.md)) | idem |
 
 `package-lock.json` fixe la version exacte de chaque paquet du front ; `npm ci` installe
 exactement celles-là.
@@ -84,6 +85,10 @@ existe-t-elle ? Décision et raison dans [`SECURITY.md`](SECURITY.md).
 **6. Tests** : `./mvnw verify` (back), `npm run test:coverage` et `npm run e2e`
 (front) ; détail dans [`TESTING.md`](TESTING.md).
 
+**6 bis. Budget du front** : `npm run build` doit passer **sans avertissement de budget**.
+Sinon, une dépendance a fait grossir le bundle : `npm run build -- --stats-json` puis
+l'analyseur d'esbuild montrent laquelle (détail dans [`PERF.md`](PERF.md#le-poids--le-bundle)).
+
 **7. Nouveau scan** : 0 faille, ou une faille acceptée et justifiée dans `SECURITY.md`.
 
 **8. Commit et PR** : `fix:` pour une faille, `chore:` pour une mise à jour de routine.
@@ -96,6 +101,7 @@ existe-t-elle ? Décision et raison dans [`SECURITY.md`](SECURITY.md).
 | **paquet piégé** (attaque de la chaîne d'approvisionnement) | `npm ci` et le lockfile : pas de version inattendue ; scripts d'installation bloqués sauf autorisation (`allowScripts`) ; Trivy figé par son empreinte ; ne pas adopter une version publiée depuis moins d'une semaine (le temps qu'un piège soit repéré) |
 | **version forcée oubliée** dans `pom.xml` | commentaire à côté, et rubrique « En suspens » ci-dessous |
 | **mise à jour majeure trop lourde** (migration Angular ou Spring Boot) | guide de migration officiel, branche dédiée, ne pas sauter de version majeure |
+| **front alourdi** par une nouvelle dépendance | budget de build (`front/angular.json`) : avertissement à 420 kB, échec à 520 kB |
 | **scan oublié** (rien n'est automatisé) | fréquence ci-dessus ; automatisation dans [`perspectives.md`](docs/perspectives.md) |
 
 ## En suspens
