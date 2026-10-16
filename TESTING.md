@@ -9,7 +9,7 @@ Stratégie de test de DataShare, tenue à jour à chaque user story.
 | Unitaire back | JUnit 5, Mockito, AssertJ | les règles d'un service, isolé | aucune : base et disque remplacés par des doublures |
 | Intégration back | Spring Boot Test, MockMvc, Testcontainers | une route de bout en bout : sécurité, validation, codes HTTP, base | PostgreSQL 18 en conteneur, migré par Flyway |
 | Unitaire front | Vitest | composants et services Angular | aucune : API simulée |
-| E2E | Cypress | un parcours utilisateur complet dans le navigateur | à préciser avec les scénarios |
+| E2E | Cypress | un parcours utilisateur complet dans le navigateur | toutes : front, API, base de dev, disque |
 | Performance | k6 | temps de réponse d'un endpoint critique sous charge | voir `PERF.md` |
 
 **Convention back** : un service est testé en **unitaire** (ses règles, isolées) ; un
@@ -32,7 +32,25 @@ priorité, et en échec comme en succès.
 | Droits sur les fichiers : un compte ne voit ni ne supprime les fichiers d'un autre (`404`) | US05, US06 | fuite ou perte de fichiers d'autrui | intégration |
 | Envoi : 1 Go max, extensions refusées, durée de 1 à 7 jours, mot de passe de 6 à 18 caractères | US01 | fichiers dangereux ou hors limites stockés | unitaire + intégration + E2E |
 | Téléchargement : `410` si expiré, `403` si mot de passe faux | US02 | fichier accessible après expiration ou sans son mot de passe | unitaire + intégration + E2E |
-| Suppression physique : fiche et fichier effacés | US06 | fichier conservé alors que l'utilisateur le croit supprimé | unitaire + intégration |
+| Suppression physique : fiche et fichier effacés | US06 | fichier conservé alors que l'utilisateur le croit supprimé | unitaire + intégration + E2E |
+
+## Scénarios E2E
+
+Trois parcours tirés des fonctionnalités critiques, joués sur la **vraie application** :
+rien n'est simulé, c'est le seul niveau qui relie le front, l'API, la base et le disque.
+
+| Scénario | Fichier (`front/cypress/e2e/`) | US | Critères d'acceptation |
+|---|---|---|---|
+| Partager un fichier | `share-a-file.cy.ts` | US03, US04, US01 | compte créé : « compte créé » sur `/login` · mauvais mot de passe : « Email ou mot de passe incorrect. » · connecté : arrivée sur l'accueil · fichier envoyé : lien `/download/<uuid>` affiché |
+| Télécharger un fichier protégé | `download-a-shared-file.cy.ts` | US02 | page ouverte **sans compte** · mauvais mot de passe : « Mot de passe incorrect. » · bon mot de passe : fichier enregistré, **contenu identique** à l'original |
+| Supprimer un fichier | `delete-a-file.cy.ts` | US05, US06 | fichier listé dans « Mes fichiers » · confirmation qui nomme le fichier · ligne retirée, suppression annoncée · **après rechargement**, toujours absent : l'API ne le renvoie plus |
+
+**Données** : chaque test crée son propre compte (`e2e-<horodatage>@test.local`), sans
+dépendre des autres tests ni du contenu de la base. Ce qu'un test ne vérifie pas (compte
+et upload des scénarios 2 et 3) est préparé par l'API (`cypress/support/api.ts`).
+
+**Hors E2E** : l'expiration (`410`) demanderait d'attendre des jours ; elle est couverte
+en unitaire et en intégration.
 
 ## Couverture
 
@@ -54,6 +72,8 @@ commande échoue (décision du 2026-10-07).
 |---|---|---|
 | `./mvnw verify` | `back/` | tests unitaires et d'intégration (Docker requis), rapport `target/site/jacoco/index.html`, contrôle du seuil |
 | `npm run test:coverage` | `front/` | tests Vitest, rapport `coverage/` et contrôle du seuil |
+| `npm run e2e` | `front/`, back (`./mvnw spring-boot:run`) et front (`npm start`) lancés | les 3 scénarios E2E, navigateur sans fenêtre ; captures des échecs dans `cypress/screenshots/` |
+| `npm run e2e:open` | idem | interface Cypress : chaque étape rejouée à l'écran |
 
 ## Tests par user story
 

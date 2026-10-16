@@ -1079,3 +1079,54 @@ la ligne disparaît en silence : un lecteur d'écran n'annonce rien. La zone exi
 le message, sinon certains lecteurs d'écran ne l'annoncent pas.
 **Conséquence assumée :** le bouton cliqué disparaît avec sa ligne : au clavier, le
 focus repart du début de la page.
+
+---
+
+## 2026-10-16 — Tests E2E : Cypress, Selenium écarté
+
+**Décidé :** Cypress pour les parcours E2E.
+**Écarté :** Selenium (suggéré par le mentor).
+**Pourquoi :** même rôle. Cypress est déjà pratiqué (P2), attend seul qu'un élément
+apparaisse (aucune attente à écrire) et rejoue chaque étape à l'écran, utile en
+démonstration. Selenium vaut pour couvrir de nombreux navigateurs ou écrire les tests en
+Java : pas un besoin du prototype.
+**Conséquence assumée :** pas de test sur Safari.
+
+---
+
+## 2026-10-16 — Tests E2E : sur la vraie application, sans API simulée
+
+**Décidé :** Cypress joue les parcours contre le front, l'API et la base de dev réels ;
+aucun `cy.intercept`.
+**Écarté :** simuler l'API comme au P2 (seul le front tourne).
+**Pourquoi :** une API simulée refait le travail des tests Vitest. Seul un test sans
+simulation prouve le branchement (proxy, intercepteur JWT, champs du multipart, en-têtes
+du téléchargement) et que le fichier revient intact.
+**Conséquence assumée :** back et front à lancer avant les tests ; un échec peut venir de
+l'environnement (Docker arrêté).
+
+---
+
+## 2026-10-16 — Tests E2E : un compte neuf par test, préparé par l'API
+
+**Décidé :** chaque test crée son compte (`e2e-<horodatage>@test.local`) ; ce qu'il ne
+vérifie pas (compte, upload) est préparé par l'API (`cy.request`, `fetch`), pas en cliquant.
+**Écarté :** vider la base avant chaque test (route ou script réservés aux tests) ; un
+compte fixe partagé.
+**Pourquoi :** tests indépendants entre eux et de l'état de la base, sans code de test
+dans l'application ; un test ne reclique que ce qu'il vérifie.
+**Conséquence assumée :** les comptes de test s'accumulent dans la base de dev
+(`docker compose down -v` pour repartir de zéro).
+
+---
+
+## 2026-10-16 — npm : scripts d'installation autorisés un par un
+
+**Décidé :** seul `cypress@16.2.0` est autorisé (`allowScripts` dans `package.json`) : son
+script télécharge l'application Cypress.
+**Écarté :** tout autoriser (`npm install-scripts approve --all`).
+**Pourquoi :** npm 11 bloque par défaut les scripts lancés à l'installation, porte
+d'entrée classique d'un paquet piégé. `esbuild`, `lmdb`, `msgpackr-extract` et
+`@parcel/watcher` restent bloqués : le build et les tests fonctionnent sans eux.
+**Conséquence assumée :** l'autorisation vaut pour une version : chaque mise à jour de
+Cypress demande un nouvel `npm install-scripts approve cypress`.

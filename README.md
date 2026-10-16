@@ -136,6 +136,18 @@ npm run test:coverage   # passage unique + couverture, échoue sous 70 %
 Tests unitaires exécutés par Vitest, dans un navigateur simulé (jsdom) : aucun
 navigateur ne s'ouvre. Rapport de couverture : `coverage/index.html`.
 
+```bash
+npm run e2e        # tests E2E (Cypress), navigateur sans fenêtre
+npm run e2e:open   # interface Cypress : on voit chaque test s'exécuter
+```
+
+Les tests E2E tournent sur la vraie application : **back et front doivent être
+lancés**. Chaque test crée un compte `e2e-…@test.local` dans la base de dev ;
+`docker compose down -v` (depuis `back/`) repart d'une base vide.
+
+L'application Cypress est téléchargée au premier `npm ci` : son script d'installation
+est autorisé dans `package.json` (`allowScripts`), npm bloquant les autres par défaut.
+
 ## Utiliser l'API sans le front
 
 Avec le back lancé, l'API répond directement sur le port 8080 :
