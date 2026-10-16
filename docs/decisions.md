@@ -1130,3 +1130,37 @@ d'entrée classique d'un paquet piégé. `esbuild`, `lmdb`, `msgpackr-extract` e
 `@parcel/watcher` restent bloqués : le build et les tests fonctionnent sans eux.
 **Conséquence assumée :** l'autorisation vaut pour une version : chaque mise à jour de
 Cypress demande un nouvel `npm install-scripts approve cypress`.
+
+---
+
+## 2026-10-16 — Scan des dépendances : Trivy, version figée, dépôt en lecture seule
+
+**Décidé :** `npm audit` pour le front, Trivy (`aquasec/trivy:0.75.0`, figée par son
+empreinte `sha256`) pour le back, le front et les secrets, lancé par Docker avec le dépôt
+monté en lecture seule.
+**Écarté :** OWASP Dependency-Check (lent, clé d'API NVD, faux positifs) ; Snyk (service
+en ligne, le projet part chez un tiers) ; OSV-Scanner (ne cherche pas les secrets) ;
+`trivy:latest`.
+**Pourquoi :** Trivy est cité par la consigne et couvre Maven, npm et les secrets en une
+commande. En mars 2026, des versions piégées de Trivy (0.69.4 à 0.69.6) ont volé les
+secrets des machines qui les lançaient : figer la version empêche qu'une nouvelle version
+piégée soit prise d'office, la lecture seule l'empêche de modifier le dépôt. 0.75.0 plutôt
+que 0.76.0, sortie deux jours avant le scan : une version piégée est en général repérée
+en quelques jours.
+**Conséquence assumée :** Trivy ne se met pas à jour seul : changer de version est un
+geste volontaire (nouvelle empreinte à relever), à prévoir dans `MAINTENANCE.md`.
+
+---
+
+## 2026-10-16 — Failles du back : Tomcat et Jackson forcés en attendant Spring Boot 4.1.2
+
+**Décidé :** dans `pom.xml`, `tomcat.version` passe à 11.0.25 (3 failles CRITICAL) et
+`jackson-bom.version` à 3.1.7 (5 HIGH, 2 MEDIUM), versions de correction des mêmes lignes.
+**Écarté :** attendre Spring Boot 4.1.2 (pas encore publiée) ; passer à 4.2.0-M2
+(version de test, pas stable).
+**Pourquoi :** les failles Jackson sont des dénis de service atteignables sans compte
+(`/api/auth/**` lit du JSON). Celles de Tomcat visent ses propres mécanismes
+d'authentification, que nous n'utilisons pas (Spring Security + JWT), mais le correctif
+ne coûte rien. Redéfinir une propriété du parent est le mécanisme prévu par Spring Boot.
+**Conséquence assumée :** à retirer au passage à Spring Boot 4.1.2, sinon ces lignes
+figeraient des versions plus anciennes que celles du nouveau parent.
