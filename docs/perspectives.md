@@ -6,7 +6,7 @@ mise en production. Chaque ligne renvoie à la décision qui en donne le context
 
 | Évolution | Quand elle devient nécessaire | Aujourd'hui | Décision d'origine |
 |---|---|---|---|
-| **Reverse proxy** : HTTPS, front et API sous un même domaine ; il sert aussi le build du front avec cache navigateur et compression forte (Brotli), deux pistes relevées par Lighthouse (`PERF.md`) | toute mise en ligne | proxy de dev Angular, HTTP ; nginx de mesure sans cache, compression par défaut | Dev : proxy Angular plutôt que CORS ; Mesure Lighthouse : le build servi par nginx |
+| **Reverse proxy** (nginx), seule porte d'entrée : HTTPS, front et API sous un même domaine, back et base sans port ouvert vers l'extérieur ; en-têtes de sécurité (`Content-Security-Policy`, HSTS, `frame-ancestors`) ; limitation de débit sur `/api/auth` contre la force brute ; il sert aussi le build du front avec cache navigateur et compression forte (Brotli), deux pistes relevées par Lighthouse (`PERF.md`) | toute mise en ligne | proxy de dev Angular, HTTP ; nginx de mesure sans cache, compression par défaut | Dev : proxy Angular plutôt que CORS ; Mesure Lighthouse : le build servi par nginx |
 | **Stockage objet** (S3, Azure Blob) : nouvelle implémentation de `FileStorage` | plusieurs instances du back, besoin de redondance | dossier local du poste | Stockage des fichiers |
 | **Upload direct vers le stockage objet** (URL d'envoi signée) : le navigateur envoie le fichier au stockage, l'API ne reçoit que la demande | fichiers lourds, nombreux uploads simultanés | chaque fichier traverse l'API (mémoire, disque, bande passante) | Stockage des fichiers |
 | **Volume Docker** pour les fichiers | back livré en conteneur | back hors Docker | Stockage des fichiers |
