@@ -9,6 +9,12 @@ dépose un fichier et obtient un lien de téléchargement à partager, valable 7
 | [`front/`](front/) | application Angular |
 | [`docs/`](docs/) | documentation technique : architecture, modèle de données, contrat d'API, décisions |
 
+| Suivi qualité | Contenu |
+|---|---|
+| [`TESTING.md`](TESTING.md) | stratégie de test, scénarios E2E, couverture |
+| [`SECURITY.md`](SECURITY.md) | règles de sécurité, scan des dépendances |
+| [`MAINTENANCE.md`](MAINTENANCE.md) | mise à jour des dépendances : procédure, fréquence, risques |
+
 ## Prérequis
 
 | Outil | Version | Rôle |
