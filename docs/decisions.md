@@ -1213,3 +1213,65 @@ un gros diff illisible.
 **Conséquence assumée :** les chiffres de référence sont ceux, datés, de `SECURITY.md` et
 `PERF.md`. Avec un pipeline CI, les rapports deviendraient des artefacts de chaque
 exécution.
+
+---
+
+## 2026-10-16 — Budget front : seuils calés sur la taille mesurée
+
+**Décidé :** budget `initial` de `front/angular.json` à 420 kB (avertissement) et 520 kB
+(erreur), soit la taille mesurée (348 kB) + 20 % et + 50 %. Le budget par composant
+(4 kB / 8 kB) garde sa valeur par défaut.
+**Écarté :** garder les valeurs par défaut d'Angular (500 kB / 1 MB) ; un seuil unique
+serré.
+**Pourquoi :** dans un prototype, le budget sert d'alarme contre l'alourdissement. Les
+valeurs par défaut ne se déclencheraient jamais pour une application de cette taille. Un
+seuil unique serré bloquerait une évolution normale : deux seuils permettent d'avertir
+pour une croissance ordinaire et de bloquer un saut anormal (librairie lourde ajoutée).
+**Conséquence assumée :** les seuils portent sur la taille brute, pas compressée. À
+relever, avec une entrée ici, si une fonctionnalité lourde est assumée.
+
+---
+
+## 2026-10-16 — Mesure navigateur : Lighthouse de Chrome, profil mobile, deux pages
+
+**Décidé :** Lighthouse intégré à Chrome (outils de développement), profil mobile,
+navigation privée, sur `/login` et `/download/:id`, catégories Performance et
+Accessibilité.
+**Écarté :** Lighthouse en ligne de commande (paquet npm de plus, avec ses scripts
+d'installation à autoriser) ; profil ordinateur (moins exigeant) ; catégorie SEO
+(application privée : on y entre par un compte ou un lien, pas par un moteur de
+recherche) ; catégorie *Best practices* (en local, elle pénaliserait surtout l'absence de
+HTTPS, déjà prévue dans `perspectives.md`).
+**Pourquoi :** rien à installer. Le profil mobile est le pire cas. `/login` est l'entrée
+de tout utilisateur ; `/download/:id` reçoit un visiteur qui n'a jamais vu le site.
+**Conséquence assumée :** mesure manuelle, à refaire après une évolution du front ;
+automatisation dans `perspectives.md`.
+
+---
+
+## 2026-10-16 — Mesure Lighthouse : le build servi par nginx, pas `ng serve`
+
+**Décidé :** Lighthouse mesure le contenu de `front/dist/`, servi par nginx 1.30.6 dans
+Docker (image figée par son empreinte `sha256`). La configuration `perf/nginx.conf`
+compresse les fichiers, renvoie les routes Angular vers `index.html` et transmet `/api`
+au back.
+**Écarté :** `ng serve`, même en configuration `production` : il envoie le code non
+compacté et non compressé, plus son outil de rechargement (2,1 Mo au lieu de 151 kB,
+score 55 au lieu de 98). Un petit serveur npm (`http-server`, `serve`) : une dépendance
+de plus, et pas de transmission simple de `/api`.
+**Pourquoi :** on mesure ce qu'on livrerait, pas l'outil de développement. Docker et une
+image figée, comme pour k6 et Trivy.
+**Conséquence assumée :** configuration de mesure, pas de déploiement : ni HTTPS ni
+cache, compression au niveau par défaut.
+
+---
+
+## 2026-10-16 — Front : pas de chargement des pages à la demande (lazy loading)
+
+**Décidé :** les 5 pages restent chargées d'emblée, dans un seul fichier JavaScript.
+**Écarté :** `loadComponent` sur chaque route, qui découpe le code page par page.
+**Pourquoi :** l'essentiel du fichier est Angular lui-même, nécessaire à toutes les
+pages. Lighthouse estime à 50 kB le code inutilisé à l'arrivée, soit environ 0,25 s en 4G
+lente, pour un score déjà de 98-99.
+**Conséquence assumée :** à mettre en place si l'application grossit ; le budget de build
+donnera l'alerte.

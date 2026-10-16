@@ -6,7 +6,7 @@ mise en production. Chaque ligne renvoie à la décision qui en donne le context
 
 | Évolution | Quand elle devient nécessaire | Aujourd'hui | Décision d'origine |
 |---|---|---|---|
-| **Reverse proxy** : HTTPS, front et API sous un même domaine | toute mise en ligne | proxy de dev Angular, HTTP | Dev : proxy Angular plutôt que CORS |
+| **Reverse proxy** : HTTPS, front et API sous un même domaine ; il sert aussi le build du front avec cache navigateur et compression forte (Brotli), deux pistes relevées par Lighthouse (`PERF.md`) | toute mise en ligne | proxy de dev Angular, HTTP ; nginx de mesure sans cache, compression par défaut | Dev : proxy Angular plutôt que CORS ; Mesure Lighthouse : le build servi par nginx |
 | **Stockage objet** (S3, Azure Blob) : nouvelle implémentation de `FileStorage` | plusieurs instances du back, besoin de redondance | dossier local du poste | Stockage des fichiers |
 | **Upload direct vers le stockage objet** (URL d'envoi signée) : le navigateur envoie le fichier au stockage, l'API ne reçoit que la demande | fichiers lourds, nombreux uploads simultanés | chaque fichier traverse l'API (mémoire, disque, bande passante) | Stockage des fichiers |
 | **Volume Docker** pour les fichiers | back livré en conteneur | back hors Docker | Stockage des fichiers |
@@ -24,3 +24,5 @@ mise en production. Chaque ligne renvoie à la décision qui en donne le context
 | **Tests E2E dans le pipeline CI** : base jetable, back et front démarrés par le pipeline avant `cypress run` | dès qu'un pipeline CI existe | lancés à la main, sur la base de dev | Tests E2E : sur la vraie application, sans API simulée |
 | **Mises à jour et scan automatisés** : Dependabot ou Renovate proposent les mises à jour en PR, Trivy tourne dans le pipeline à chaque PR | dès qu'un pipeline CI existe | scan et mises à jour lancés à la main, chaque semaine (`MAINTENANCE.md`) | Scan des dépendances : Trivy, version figée |
 | **Tests de charge poussés** sur une machine dédiée, distincte du serveur : montée jusqu'à saturation (capacité maximale), gros fichiers (100 Mo à 1 Go), téléchargement ; k6 dans le pipeline CI | avant toute mise en ligne | un test de 50 s sur le poste de dev, fichiers de 1 Mo, upload seul (`PERF.md`) | Test de charge : k6 sur l'upload, lancé par Docker |
+| **Chargement des pages à la demande** (*lazy loading*, `loadComponent` sur chaque route) | avertissement du budget de build, ou pages lourdes ajoutées | un seul fichier JavaScript, environ 50 kB inutilisés à l'arrivée | Front : pas de chargement des pages à la demande |
+| **Lighthouse dans le pipeline CI** (Lighthouse CI) : mesure à chaque PR, échec sous un score fixé | dès qu'un pipeline CI existe | mesure manuelle dans Chrome, deux pages | Mesure navigateur : Lighthouse de Chrome |
