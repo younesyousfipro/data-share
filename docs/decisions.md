@@ -1164,3 +1164,52 @@ d'authentification, que nous n'utilisons pas (Spring Security + JWT), mais le co
 ne coûte rien. Redéfinir une propriété du parent est le mécanisme prévu par Spring Boot.
 **Conséquence assumée :** à retirer au passage à Spring Boot 4.1.2, sinon ces lignes
 figeraient des versions plus anciennes que celles du nouveau parent.
+
+---
+
+## 2026-10-16 — Test de charge : k6 sur l'upload, lancé par Docker
+
+**Décidé :** un test k6 sur `POST /api/files` (fichiers de 1 Mo, jusqu'à 10 utilisateurs
+simultanés, 50 s), script dans `perf/` à la racine, lancé par l'image
+`grafana/k6:2.3.0` figée par son empreinte `sha256`.
+**Écarté :** tester d'abord le téléchargement (moins coûteux : pas de JWT, une seule
+lecture du disque) ; k6 installé sur le poste (`brew`), dont la version varie d'un poste à
+l'autre ; Grafana Cloud k6 ou test réparti sur plusieurs machines (hors périmètre du
+prototype) ; script rangé dans `back/` (k6 teste l'API qui tourne, de l'extérieur, il ne
+fait pas partie du build Maven).
+**Pourquoi :** l'upload est l'exemple de la consigne et l'endpoint le plus coûteux (JWT,
+réception du fichier, double écriture sur le disque). Docker, comme pour Trivy : rien à
+installer, même version pour tous.
+**Conséquence assumée :** k6 et l'application tournent sur la même machine : chiffres à
+lire comme des ordres de grandeur, limites détaillées dans `PERF.md`.
+
+---
+
+## 2026-10-16 — Test de charge : seuils sur l'upload seul, p95 sous 1 s
+
+**Décidé :** le test échoue si plus de 1 % des uploads sont en erreur ou si 5 % prennent
+plus de 1 s (p95). Les seuils ne portent que sur les requêtes d'upload.
+**Écarté :** la moyenne (elle cache les requêtes lentes) ; des seuils sur toutes les
+requêtes, qui compteraient l'inscription du compte de test (BCrypt, volontairement lent)
+et les suppressions du nettoyage.
+**Pourquoi :** 1 s est la limite au-delà de laquelle l'utilisateur perd le fil de son
+action (Jakob Nielsen) ; un test qui échoue au-delà d'un seuil est un critère vérifiable,
+pas une impression.
+**Conséquence assumée :** un seuil dépassé donne un code de sortie non nul : le test
+pourra bloquer un pipeline CI tel quel.
+
+---
+
+## 2026-10-16 — Rapports bruts des scans et du test de charge : hors du dépôt
+
+**Décidé :** les rapports produits par les outils (JSON de `npm audit` et de Trivy, rapport
+HTML de k6) sont écrits hors du dépôt (`P3/scans/`, `P3/perf-reports/`). Le dépôt garde
+les commandes, les scripts, les chiffres interprétés (`SECURITY.md`, `PERF.md`) et les
+captures.
+**Écarté :** versionner les rapports bruts.
+**Pourquoi :** ils se régénèrent en une commande, dépendent de la machine et du jour de la
+mesure (versionnés, ils passeraient pour une référence) et chaque nouvelle mesure ferait
+un gros diff illisible.
+**Conséquence assumée :** les chiffres de référence sont ceux, datés, de `SECURITY.md` et
+`PERF.md`. Avec un pipeline CI, les rapports deviendraient des artefacts de chaque
+exécution.

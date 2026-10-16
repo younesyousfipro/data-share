@@ -17,6 +17,7 @@ Résultats du dernier scan : [`SECURITY.md`](SECURITY.md).
 | Cypress | 16.2 | `front/package.json` | script d'installation autorisé version par version |
 | PostgreSQL | 18 | `back/compose.yaml` | image Docker |
 | Trivy | 0.75.0 | commande de scan (ci-dessous) | figé par son empreinte, mis à jour à la main |
+| k6 | 2.3.0 | commande de test ([`PERF.md`](PERF.md)) | idem |
 
 `package-lock.json` fixe la version exacte de chaque paquet du front ; `npm ci` installe
 exactement celles-là.
