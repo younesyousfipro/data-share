@@ -6,7 +6,8 @@ stories, puis résultats des scans. Détail technique :
 [`decisions.md`](docs/decisions.md).
 
 **Sommaire** : [Politique de sécurité](#politique-de-sécurité-de-lapplication) ·
-[Scan des dépendances](#scan-des-dépendances) · mise à jour des dépendances :
+[Scan des dépendances](#scan-des-dépendances) ·
+[Analyse du code](#analyse-du-code-sonarqube) · mise à jour des dépendances :
 [`MAINTENANCE.md`](MAINTENANCE.md)
 
 ## Politique de sécurité de l'application
@@ -154,4 +155,62 @@ mécanisme prévu par Spring Boot, à retirer au passage à 4.1.2.
 |---|---|
 | failles pas encore publiées | un scan à 0 vaut pour ce jour-là : d'où un scan régulier ([`MAINTENANCE.md`](MAINTENANCE.md)) |
 | secrets de format inconnu | la clé JWT, chaîne aléatoire, ne serait pas reconnue : elle est protégée par `.gitignore`, pas par le scan |
-| notre propre code | seules les bibliothèques sont analysées ; l'analyse du code (SAST, par exemple SonarQube) est un autre outil |
+| notre propre code | seules les bibliothèques sont analysées ; notre code l'est par SonarQube ([section suivante](#analyse-du-code-sonarqube)) |
+
+## Analyse du code (SonarQube)
+
+Dernière analyse : **17 octobre 2026**. La relancer, et le détail qualité (dette,
+duplication) : [`MAINTENANCE.md`](MAINTENANCE.md#qualité-du-code-sonarqube).
+
+Le scan des dépendances regarde les bibliothèques. SonarQube lit **notre code**, sans
+l'exécuter, et le confronte à ses règles (analyse statique, ou SAST) : failles, bugs
+probables, code difficile à maintenir.
+
+### En bref
+
+| | Avant | Après |
+|---|---|---|
+| Back (environ 1 000 lignes) | Security **D** : 1 remarque de gravité *high* ; 19 remarques en tout | A partout, 0 remarque ouverte |
+| Front (environ 1 500 lignes) | Security A ; 15 remarques en tout, dont aucune de sécurité | A partout, 0 remarque ouverte |
+| *Security hotspots* (code sensible à faire relire) | 0 | 0 |
+
+![Les deux projets après corrections](docs/captures/sonar-apres.png)
+
+<details>
+<summary>Avant corrections</summary>
+
+![Back avant corrections](docs/captures/sonar-avant-back.png)
+
+![Front avant corrections](docs/captures/sonar-avant-front.png)
+
+</details>
+
+### La remarque de sécurité : CSRF désactivé
+
+SonarQube ne dit pas « c'est une faille », il dit « vérifiez que c'est sans danger ».
+Décision : **acceptée**, sans changer le code.
+
+| Question | Réponse |
+|---|---|
+| Ce que fait l'attaque | un site piégé envoie une requête vers notre API ; le navigateur y joint **tout seul** les cookies de l'utilisateur |
+| Pourquoi elle échoue chez nous | aucun cookie : le JWT est ajouté par notre code dans l'en-tête `Authorization`, un autre site ne peut ni le lire ni l'envoyer |
+| Quand la décision tombe | si le jeton passe dans un cookie `HttpOnly` ([Limites connues](#limites-connues)) : réactiver la protection CSRF |
+
+La décision est tracée dans l'outil : statut *Accepted*, auteur, date et raison.
+
+![Remarque CSRF acceptée, avec sa justification](docs/captures/sonar-csrf-accepte.png)
+
+<details>
+<summary>La ligne visée dans le code</summary>
+
+![Ligne .csrf(AbstractHttpConfigurer::disable) signalée par SonarQube](docs/captures/sonar-csrf-code.png)
+
+</details>
+
+### Ce que l'analyse ne couvre pas
+
+| Angle mort | Parade |
+|---|---|
+| suivi d'une donnée de l'utilisateur jusqu'à un point dangereux (*analyse de taint* : injection SQL, *path traversal*) | absent de l'édition gratuite (Community Build). Risques traités par conception : requêtes JPA paramétrées, fichiers stockés sous leur UUID et jamais sous le nom reçu ([Fichiers déposés](#fichiers-déposés)). Outil dédié : [`perspectives.md`](docs/perspectives.md) |
+| erreurs de logique (un compte qui accède au fichier d'un autre) | tests d'intégration ([`TESTING.md`](TESTING.md)) |
+| bibliothèques | [scan des dépendances](#scan-des-dépendances) |

@@ -1333,3 +1333,71 @@ décourageantes ; un outil de collecte (Loki, Kibana), disproportionné pour un 
 que ceux publiés dans `PERF.md`. Si un champ change de nom, une seule correction.
 **Conséquence assumée :** le script relit tout le fichier : adapté à un prototype, pas à
 un serveur en production (outil de collecte dans `perspectives.md`).
+
+---
+
+## 2026-10-16 — Analyse du code : SonarQube local, ponctuel, sans CI
+
+*(Décidée le 2026-10-16 sur suggestion du mentor, consignée le 2026-10-18 à la fin de
+l'analyse.)*
+
+**Décidé :** SonarQube Community Build (26.9, figé par son empreinte) dans Docker sur le
+poste, port ouvert sur la seule machine ; une analyse du back et du front avant et après
+corrections, sans pipeline CI.
+**Écarté :** SonarQube Cloud (pas de serveur à faire tourner, analyse de taint incluse,
+mais le code part chez un tiers, le compte est lié à GitHub, et son analyse automatique
+ne lit ni la couverture ni un dépôt back + front : il est pensé pour une CI) ; Semgrep et
+CodeQL, orientés sécurité, alors que ce qui manque ici est un regard sur la qualité du
+code ; Qodana (JetBrains), moins répandu.
+**Pourquoi :** `npm audit` et Trivy n'analysent que les bibliothèques ; SonarQube lit
+notre code. Sa force (maintenabilité, fiabilité, plus une sécurité de base) correspond au
+besoin, c'est un standard en entreprise sur Java, et l'analyse se relance sans compte, comme
+Trivy et k6.
+**Conséquence assumée :** pas d'analyse de taint dans l'édition gratuite (risques
+couverts par conception, voir `SECURITY.md`) ; pas de suivi continu (CI dans
+`perspectives.md`).
+
+---
+
+## 2026-10-17 — SonarQube : deux projets, deux scanners
+
+**Décidé :** projet `datashare-back`, analysé par le plugin Maven (configuration dans les
+propriétés de `pom.xml`) ; projet `datashare-front`, analysé par le scanner officiel en
+Docker (`front/sonar-project.properties`). L'adresse du serveur est écrite dans les deux.
+**Écarté :** un seul projet pour tout le dépôt : chemins des classes Java à déclarer à la
+main, deux rapports de couverture mélangés.
+**Pourquoi :** deux builds et deux outils de couverture distincts ; le plugin Maven trouve
+seul les classes compilées et `jacoco.xml`. L'adresse explicite parce que, sans elle, les
+scanners récents visent SonarQube Cloud : au premier essai, le token local y a été envoyé.
+**Conséquence assumée :** deux analyses à lancer ; l'image du scanner front n'existe
+qu'en amd64, émulée (plus lente) sur un Mac Apple Silicon.
+
+---
+
+## 2026-10-17 — SonarQube : règle de tri des remarques
+
+**Décidé :** corriger les bugs et les failles, examiner chaque remarque de sécurité,
+corriger les remarques de maintenabilité simples et utiles ; les autres sont marquées
+*Accepted* ou *False Positive* dans SonarQube, avec leur raison en commentaire.
+**Écarté :** viser 0 remarque à tout prix : remplacer `role="status"` par `<output>`,
+extraire un composant commun aux pages de connexion et d'inscription.
+**Pourquoi :** une note qui remonte doit refléter une décision, pas un contournement de
+la règle. `role="status"` est valide et bien lu par les lecteurs d'écran (Lighthouse
+accessibilité : 100), et Cypress s'appuie dessus ; 27 lignes communes à deux pages qui
+évolueront séparément ne justifient pas une abstraction.
+**Conséquence assumée :** 10 remarques acceptées, à revoir lors de la revue de
+l'interface pour les rôles ARIA.
+
+---
+
+## 2026-10-17 — Horodatage des erreurs en `Instant` (UTC)
+
+**Décidé :** le champ `timestamp` des erreurs (`ErrorDetailsDTO`) devient un `Instant` :
+`"2026-10-03T10:15:30Z"` au lieu de `"2026-10-03T10:15:30"`.
+**Écarté :** garder `LocalDateTime`, format repris du P2.
+**Pourquoi :** relevé par SonarQube. Une heure sans fuseau ne peut pas être située par un
+client ; c'était la seule date de l'API sans `Z`, et l'exemple d'`openapi.yaml` n'était
+pas une `date-time` valide (RFC 3339).
+**Conséquence assumée :** petit changement du contrat (`openapi.yaml`,
+`contrat-interface.md`), sans effet sur le front, qui ne lit pas ce champ ; un test
+vérifie le `Z`.

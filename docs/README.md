@@ -9,9 +9,9 @@
 | [`conception/contrat-interface.md`](conception/contrat-interface.md) | endpoints de l'API (détail dans `openapi.yaml`) |
 | [`conception/choix-techno.md`](conception/choix-techno.md) | justification de la stack |
 | [`perspectives.md`](perspectives.md) | évolutions prévues pour une mise en production |
-| [`../SECURITY.md`](../SECURITY.md) | politique de sécurité, limites connues, scans |
+| [`../SECURITY.md`](../SECURITY.md) | politique de sécurité, limites connues, scans des dépendances et du code (SonarQube) |
 | [`../PERF.md`](../PERF.md) | test de charge de l'upload (k6) : résultats, limites ; budget de performance front (bundle, Lighthouse) ; logs structurés et suivi des métriques |
-| [`../MAINTENANCE.md`](../MAINTENANCE.md) | mise à jour des dépendances : procédure, fréquence, risques ; exploitation des logs |
+| [`../MAINTENANCE.md`](../MAINTENANCE.md) | mise à jour des dépendances : procédure, fréquence, risques ; qualité du code (SonarQube) ; exploitation des logs |
 | [`brief/`](brief/) | énoncé et spécifications d'origine |
 
 **Ordre de lecture conseillé** : `use-cases.md` → `modele-donnees.md` →

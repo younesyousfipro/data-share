@@ -1,11 +1,11 @@
 # Maintenance
 
-Comment garder les dépendances de DataShare à jour sans casser l'application, et
-comment exploiter ses logs. Résultats du dernier scan : [`SECURITY.md`](SECURITY.md).
+Comment garder les dépendances de DataShare à jour sans casser l'application, comment
+analyser la qualité de son code et comment exploiter ses logs. Résultats du dernier scan : [`SECURITY.md`](SECURITY.md).
 
 **Sommaire** : [Ce qu'on maintient](#ce-quon-maintient) · [Fréquence](#fréquence) ·
 [Procédure](#procédure) · [Risques](#risques) · [En suspens](#en-suspens) ·
-[Logs](#logs)
+[Qualité du code](#qualité-du-code-sonarqube) · [Logs](#logs)
 
 ## Ce qu'on maintient
 
@@ -20,6 +20,9 @@ comment exploiter ses logs. Résultats du dernier scan : [`SECURITY.md`](SECURIT
 | Trivy | 0.75.0 | commande de scan (ci-dessous) | figé par son empreinte, mis à jour à la main |
 | k6 | 2.3.0 | commande de test ([`PERF.md`](PERF.md)) | idem |
 | nginx | 1.30.6 | commande de mesure Lighthouse ([`PERF.md`](PERF.md)) | idem |
+| SonarQube Community Build | 26.9 | commande d'analyse ([Qualité du code](#qualité-du-code-sonarqube)) | idem |
+| Scanner SonarQube du front | 12.2 | idem | idem |
+| Plugin Maven SonarQube du back | 5.8 | `back/pom.xml`, `sonar-maven-plugin.version` | |
 
 `package-lock.json` fixe la version exacte de chaque paquet du front ; `npm ci` installe
 exactement celles-là.
@@ -33,6 +36,7 @@ exactement celles-là.
 | chaque mois | versions de correction (dernier chiffre : 4.1.1 → 4.1.2) |
 | à chaque version majeure (Angular, Spring Boot, Java) | branche dédiée, en suivant le guide de migration officiel |
 | chaque semaine | lecture des logs : erreurs `5xx`, fichiers orphelins ([Logs](#logs)) |
+| à la fin de chaque chantier, avant la PR | analyse SonarQube : 0 remarque ouverte ([Qualité du code](#qualité-du-code-sonarqube)) |
 
 ## Procédure
 
@@ -105,6 +109,7 @@ l'analyseur d'esbuild montrent laquelle (détail dans [`PERF.md`](PERF.md#le-poi
 | **mise à jour majeure trop lourde** (migration Angular ou Spring Boot) | guide de migration officiel, branche dédiée, ne pas sauter de version majeure |
 | **front alourdi** par une nouvelle dépendance | budget de build (`front/angular.json`) : avertissement à 420 kB, échec à 520 kB |
 | **disque rempli par les logs** | rotation automatique (ci-dessous) ; en production, plafond de taille total (`logging.logback.rollingpolicy.total-size-cap`) |
+| **dette qui s'accumule** sans que personne la voie | analyse SonarQube avant chaque PR ; en CI, une *quality gate* bloquante ([`perspectives.md`](docs/perspectives.md)) |
 | **scan oublié** (rien n'est automatisé) | fréquence ci-dessus ; automatisation dans [`perspectives.md`](docs/perspectives.md) |
 
 ## En suspens
@@ -112,7 +117,111 @@ l'analyseur d'esbuild montrent laquelle (détail dans [`PERF.md`](PERF.md#le-poi
 | Action | Quand |
 |---|---|
 | retirer `tomcat.version` et `jackson-bom.version` de `back/pom.xml` | au passage à Spring Boot 4.1.2 |
-| passer Trivy en version plus récente : relever la nouvelle empreinte sur Docker Hub | au prochain scan, sur une version publiée depuis plus d'une semaine |
+| passer Trivy et SonarQube (serveur, scanner) en version plus récente : relever la nouvelle empreinte sur Docker Hub | au prochain scan, sur une version publiée depuis plus d'une semaine |
+
+## Qualité du code (SonarQube)
+
+Résultat côté sécurité : [`SECURITY.md`](SECURITY.md#analyse-du-code-sonarqube) ; raisons
+des choix : [`decisions.md`](docs/decisions.md).
+
+| SonarQube mesure | Ce qu'on en fait |
+|---|---|
+| des remarques (*issues*), classées par qualité touchée : sécurité, fiabilité, maintenabilité | chacune est corrigée, ou justifiée dans l'outil |
+| la dette technique : temps estimé pour corriger les remarques ouvertes | elle reste à 0 |
+| la duplication : lignes copiées-collées | expliquée si elle n'est pas nulle |
+| la complexité cognitive : difficulté à lire une fonction | aucune au-dessus de 15, le seuil de SonarQube |
+| la couverture | **SonarQube ne la calcule pas** : il affiche les rapports de JaCoCo et de Vitest ([`TESTING.md`](TESTING.md#couverture)) |
+
+### Résultats (17 octobre 2026)
+
+| | Back | Front |
+|---|---|---|
+| Remarques ouvertes, avant → après | 19 → 0 | 15 → 0 |
+| Dette technique, avant → après | 102 min → 0 | 58 min → 0 |
+| Duplication | 0 % | 3 % |
+| Complexité la plus haute | 12 (`FileService`) | 12 (`download.ts`) |
+| Couverture | 96,3 % | 98,9 % |
+
+**34 remarques : 24 corrigées, 10 justifiées.**
+
+| Corrigé | Comment |
+|---|---|
+| **un vrai défaut** : l'horodatage des erreurs partait sans fuseau (`10:15:30`), seule date de l'API sans `Z` | `Instant` (UTC) ; un test vérifie le `Z` |
+| 13 tests qui pouvaient passer pour une mauvaise raison | l'argument est préparé avant `assertThatThrownBy`, qui ne contient plus que l'appel testé |
+| 10 remarques de lisibilité | ternaires imbriqués, `throws` inutile, `Set` plutôt qu'un tableau, `toHaveLength` |
+
+| Accepté (dette assumée) | Raison |
+|---|---|
+| CSRF désactivé (1) | [`SECURITY.md`](SECURITY.md#la-remarque-de-sécurité--csrf-désactivé) |
+| `role="status"` et `role="group"` plutôt que `<output>` et `<fieldset>` (8) | rôles ARIA valides et bien lus par les lecteurs d'écran (accessibilité Lighthouse : 100), sur lesquels Cypress s'appuie ; `<output>` est prévu pour le résultat d'un calcul, `<fieldset>` pour des champs de formulaire. À revoir lors de la revue de l'interface |
+| champ fichier sans label (1, faux positif) | il porte `hidden`, donc hors de l'arbre d'accessibilité ; ce sont les boutons visibles qui ouvrent le sélecteur |
+| duplication de 3 % (une mesure, pas une remarque) | 27 lignes communes à `login.html` et `register.html` : deux pages qui évolueront séparément, un composant commun serait de la sur-ingénierie |
+
+### Procédure
+
+**1. Serveur**, une fois ; le port n'est ouvert que sur la machine :
+
+```bash
+docker run -d --name sonarqube -p 127.0.0.1:9000:9000 \
+  sonarqube:26.9.0.129388-community@sha256:c0f1160bccfa435db4168c2d7df69af3c3ea7bfeb87395613014048fb33a68c1
+curl -s http://localhost:9000/api/system/status   # attendre "status":"UP", 1 à 2 min
+```
+
+**2. Premier lancement** : http://localhost:9000, `admin` / `admin`, nouveau mot de passe
+imposé. Puis *My Account* → *Security* → un token de type **Global Analysis Token**
+(30 jours) : il ne sert qu'à envoyer des analyses.
+
+**3. Token dans le terminal**, sans trace dans l'historique (à refaire dans chaque
+nouveau terminal) :
+
+```bash
+read -s SONAR_TOKEN && export SONAR_TOKEN
+```
+
+**4. Back** (depuis `back/`) ; `verify` régénère le rapport de couverture juste avant :
+
+```bash
+./mvnw verify sonar:sonar
+```
+
+**5. Front** (depuis `front/`) :
+
+```bash
+npm run test:coverage   # produit coverage/datashare/lcov.info, lu par SonarQube
+docker run --rm --platform linux/amd64 \
+  --network container:sonarqube \
+  -e SONAR_TOKEN \
+  -v "$PWD:/usr/src:ro" \
+  sonarsource/sonar-scanner-cli:12.2.0.4256_8.1.0@sha256:a3f4215076706c95a17a68c19322ee916e40a3acd081a8c1a1e839e0194afa57 \
+  -Dsonar.working.directory=/tmp/scannerwork
+```
+
+| Option | Rôle |
+|---|---|
+| `--network container:sonarqube` | le scanner partage le réseau du serveur : `localhost:9000` désigne bien SonarQube, et non le conteneur du scanner |
+| `-e SONAR_TOKEN` | sans valeur : Docker reprend la variable du terminal, le token n'apparaît pas dans la commande |
+| `:ro` et `sonar.working.directory` | code en lecture seule ; les fichiers de travail du scanner restent dans le conteneur, effacé à la fin |
+
+**6. Lire** : *Projects*, puis l'onglet *Issues* de chaque projet ; *Why is this an
+issue?* explique chaque règle. Une remarque non corrigée est marquée *Accept* ou
+*False Positive*, avec sa raison en commentaire.
+
+**7. Arrêter** : `docker stop sonarqube` libère la mémoire (environ 2 Go).
+`docker start sonarqube` reprend avec les analyses et les décisions ; **`docker rm` les
+efface**.
+
+Configuration versionnée : propriétés `sonar.*` de `back/pom.xml`,
+`front/sonar-project.properties`. Pendant l'écriture du code, l'extension *SonarQube for
+IDE* de VS Code applique les mêmes règles.
+
+### Pièges
+
+| Piège | Parade |
+|---|---|
+| sans `sonar.host.url`, les scanners récents visent SonarQube Cloud : au premier essai, le token local y a été envoyé (et refusé) | URL du serveur écrite dans `pom.xml` et `sonar-project.properties` |
+| le token d'analyse ne peut pas lire l'API (export des remarques en JSON) | lire avec le compte `admin` : `curl -u admin "http://localhost:9000/api/issues/search?components=datashare-back&ps=500"` |
+| image du scanner front publiée en amd64 seulement | `--platform linux/amd64` : émulée sur un Mac Apple Silicon, plus lente |
+| la *quality gate* par défaut juge le **nouveau** code | à la première analyse, « Passed » ne prouve rien : lire les remarques |
 
 ## Logs
 
