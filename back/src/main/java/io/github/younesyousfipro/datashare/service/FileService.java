@@ -75,6 +75,7 @@ public class FileService {
 			fileStorage.delete(file.getId());
 			throw e;
 		}
+		logFileEvent("upload", file);
 		return fileMapper.toResponse(file);
 	}
 
@@ -97,8 +98,13 @@ public class FileService {
 		try {
 			fileStorage.delete(id);
 		} catch (UncheckedIOException e) {
-			log.warn("File {} deleted from the database but left on disk", id, e);
+			log.atWarn()
+					.addKeyValue("action", "delete")
+					.addKeyValue("fileId", id.toString())
+					.setCause(e)
+					.log("File {} deleted from the database but left on disk", id);
 		}
+		logFileEvent("delete", file);
 	}
 
 	public FileMetadataResponseDTO getMetadata(UUID id) {
@@ -109,7 +115,10 @@ public class FileService {
 		SharedFile file = findDownloadable(id);
 		checkPassword(file, password);
 		// Opened last, once every check has passed: nothing can fail before Spring takes the stream and closes it
-		return new FileContentDTO(file.getOriginalName(), file.getSizeBytes(), fileStorage.read(id));
+		InputStream content = fileStorage.read(id);
+		// Logged when the stream is handed to Spring: an interrupted transfer still counts as a download
+		logFileEvent("download", file);
+		return new FileContentDTO(file.getOriginalName(), file.getSizeBytes(), content);
 	}
 
 	// Unknown (404) then expired (410): an expired file is gone for everyone, password or not
@@ -144,6 +153,16 @@ public class FileService {
 	private String extensionOf(String name) {
 		int lastDot = name.lastIndexOf('.');
 		return lastDot < 0 ? "" : name.substring(lastDot + 1).toLowerCase(Locale.ROOT);
+	}
+
+	// accountId is the owner of the file, also for a download made by an anonymous recipient
+	private void logFileEvent(String action, SharedFile file) {
+		log.atInfo()
+				.addKeyValue("action", action)
+				.addKeyValue("fileId", file.getId().toString())
+				.addKeyValue("sizeBytes", file.getSizeBytes())
+				.addKeyValue("accountId", file.getAccountId())
+				.log("File {}: {} ({} bytes)", file.getId(), action, file.getSizeBytes());
 	}
 
 	private void store(UUID id, MultipartFile upload) {
