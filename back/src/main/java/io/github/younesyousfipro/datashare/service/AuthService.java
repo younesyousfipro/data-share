@@ -34,7 +34,7 @@ public class AuthService {
 
 		try {
 			accountRepository.saveAndFlush(account);
-		} catch (DataIntegrityViolationException e) {
+		} catch (DataIntegrityViolationException _) {
 			// Same email registered concurrently: the unique constraint rejected the second one
 			throw new EmailAlreadyUsedException();
 		}

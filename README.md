@@ -12,9 +12,9 @@ dépose un fichier et obtient un lien de téléchargement à partager, valable 7
 | Suivi qualité | Contenu |
 |---|---|
 | [`TESTING.md`](TESTING.md) | stratégie de test, scénarios E2E, couverture |
-| [`SECURITY.md`](SECURITY.md) | règles de sécurité, scan des dépendances |
+| [`SECURITY.md`](SECURITY.md) | règles de sécurité, scan des dépendances, analyse du code (SonarQube) |
 | [`PERF.md`](PERF.md) | test de charge de l'upload (k6), budget de performance front (bundle, Lighthouse), logs structurés et suivi des métriques |
-| [`MAINTENANCE.md`](MAINTENANCE.md) | mise à jour des dépendances : procédure, fréquence, risques ; exploitation des logs |
+| [`MAINTENANCE.md`](MAINTENANCE.md) | mise à jour des dépendances : procédure, fréquence, risques ; qualité du code (SonarQube) ; exploitation des logs |
 
 ## Prérequis
 

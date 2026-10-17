@@ -3,7 +3,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // Counts calendar days: a file expiring at 9 am tomorrow expires "demain", even 30 h ahead
 export function expiryDay(expiresAt: Date, now: Date): string {
   const days = calendarDaysBetween(now, expiresAt);
-  return days === 0 ? "aujourd'hui" : days === 1 ? 'demain' : `dans ${days} jours`;
+  if (days === 0) {
+    return "aujourd'hui";
+  }
+  if (days === 1) {
+    return 'demain';
+  }
+  return `dans ${days} jours`;
 }
 
 // Same threshold as the EXPIRING_SOON status of the API

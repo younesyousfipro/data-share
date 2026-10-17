@@ -105,7 +105,7 @@ describe('Login', () => {
     await fillField('password', 'short');
     await submitForm();
 
-    expect(page.querySelectorAll('.field-error').length).toBe(0);
+    expect(page.querySelectorAll('.field-error')).toHaveLength(0);
   });
 
   it('should not call the API when the form is invalid', async () => {

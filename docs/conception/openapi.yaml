@@ -419,7 +419,7 @@ components:
         timestamp:
           type: string
           format: date-time
-          example: '2026-10-03T10:15:30'
+          example: '2026-10-03T10:15:30Z'
         message:
           type: string
           example: This file has expired

@@ -9,7 +9,7 @@ import { FileSizePipe } from '../../shared/file-size.pipe';
 import { saveFile } from '../../shared/save-file';
 
 // The file is gone since the page was opened (deleted, expired): the whole page says so
-const UNAVAILABLE_STATUSES = [400, 404, 410];
+const UNAVAILABLE_STATUSES = new Set([400, 404, 410]);
 
 interface ExpiryNotice {
   text: string;
@@ -68,7 +68,7 @@ export class Download {
       error: (error: HttpErrorResponse) => {
         this.downloading.set(false);
         this.downloadStatus.set(null);
-        if (UNAVAILABLE_STATUSES.includes(error.status)) {
+        if (UNAVAILABLE_STATUSES.has(error.status)) {
           this.metadata.set(null);
           this.unavailableMessage.set(unavailableMessage(error.status));
         } else {

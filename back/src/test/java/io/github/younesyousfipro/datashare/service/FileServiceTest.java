@@ -120,7 +120,8 @@ class FileServiceTest {
 	@ParameterizedTest
 	@ValueSource(strings = {"virus.exe", "invoice.pdf.EXE", "script.sh", "app.jar"})
 	void upload_forbiddenExtension_rejectedBeforeAnyWrite(String name) {
-		assertThatThrownBy(() -> fileService.upload(request(name, null, null), ACCOUNT_ID))
+		UploadRequestDTO request = request(name, null, null);
+		assertThatThrownBy(() -> fileService.upload(request, ACCOUNT_ID))
 				.isInstanceOf(InvalidFileException.class);
 		verifyNoInteractions(fileStorage, sharedFileRepository);
 	}
@@ -135,9 +136,12 @@ class FileServiceTest {
 
 	@Test
 	void upload_blankOrTooLongName_rejectedBeforeAnyWrite() {
-		assertThatThrownBy(() -> fileService.upload(request(" ", null, null), ACCOUNT_ID))
+		UploadRequestDTO blankName = request(" ", null, null);
+		UploadRequestDTO tooLongName = request("a".repeat(256), null, null);
+
+		assertThatThrownBy(() -> fileService.upload(blankName, ACCOUNT_ID))
 				.isInstanceOf(InvalidFileException.class);
-		assertThatThrownBy(() -> fileService.upload(request("a".repeat(256), null, null), ACCOUNT_ID))
+		assertThatThrownBy(() -> fileService.upload(tooLongName, ACCOUNT_ID))
 				.isInstanceOf(InvalidFileException.class);
 		verifyNoInteractions(fileStorage, sharedFileRepository);
 	}
@@ -208,10 +212,10 @@ class FileServiceTest {
 	@Test
 	void delete_fileOfAnotherAccount_throwsNotFoundAndDeletesNothing() {
 		// GIVEN
-		SharedFile file = storedFile(Duration.ofDays(3), null);
+		UUID fileId = storedFile(Duration.ofDays(3), null).getId();
 
 		// WHEN / THEN: same answer as an unknown file
-		assertThatThrownBy(() -> fileService.delete(file.getId(), 7L))
+		assertThatThrownBy(() -> fileService.delete(fileId, 7L))
 				.isInstanceOf(SharedFileNotFoundException.class);
 		verify(sharedFileRepository, never()).delete(any());
 		verifyNoInteractions(fileStorage);
@@ -267,10 +271,10 @@ class FileServiceTest {
 	@Test
 	void getMetadata_expiredFile_throwsExpired() {
 		// GIVEN
-		SharedFile file = storedFile(Duration.ofHours(-1), null);
+		UUID fileId = storedFile(Duration.ofHours(-1), null).getId();
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> fileService.getMetadata(file.getId()))
+		assertThatThrownBy(() -> fileService.getMetadata(fileId))
 				.isInstanceOf(FileExpiredException.class);
 	}
 
@@ -306,10 +310,10 @@ class FileServiceTest {
 	@ValueSource(strings = {"wrong1", "S3CRET"})
 	void download_protectedFileWithMissingOrWrongPassword_throwsWithoutOpeningFile(String password) {
 		// GIVEN
-		SharedFile file = storedFile(Duration.ofDays(3), FILE_PASSWORD);
+		UUID fileId = storedFile(Duration.ofDays(3), FILE_PASSWORD).getId();
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> fileService.download(file.getId(), password))
+		assertThatThrownBy(() -> fileService.download(fileId, password))
 				.isInstanceOf(WrongFilePasswordException.class);
 		verify(fileStorage, never()).read(any());
 	}
@@ -317,10 +321,10 @@ class FileServiceTest {
 	@Test
 	void download_expiredProtectedFile_throwsExpiredBeforeCheckingPassword() {
 		// GIVEN
-		SharedFile file = storedFile(Duration.ofHours(-1), FILE_PASSWORD);
+		UUID fileId = storedFile(Duration.ofHours(-1), FILE_PASSWORD).getId();
 
 		// WHEN / THEN: expired wins, even with a wrong password
-		assertThatThrownBy(() -> fileService.download(file.getId(), "wrong1"))
+		assertThatThrownBy(() -> fileService.download(fileId, "wrong1"))
 				.isInstanceOf(FileExpiredException.class);
 		verify(fileStorage, never()).read(any());
 	}

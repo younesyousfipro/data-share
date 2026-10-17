@@ -54,7 +54,7 @@ describe('Register', () => {
   }
 
   it('should show no error before the user leaves a field', () => {
-    expect(page.querySelectorAll('.field-error').length).toBe(0);
+    expect(page.querySelectorAll('.field-error')).toHaveLength(0);
   });
 
   it('should show every missing field when submitting an empty form', async () => {
@@ -103,7 +103,7 @@ describe('Register', () => {
     await fillField('confirm-password', 's3cretPass');
     await submitForm();
 
-    expect(page.querySelectorAll('.field-error').length).toBe(0);
+    expect(page.querySelectorAll('.field-error')).toHaveLength(0);
   });
 
   it('should not call the API when the form is invalid', async () => {

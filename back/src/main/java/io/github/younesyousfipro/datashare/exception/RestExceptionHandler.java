@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -72,14 +72,21 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 	@Override
 	protected ResponseEntity<Object> handleExceptionInternal(Exception e, Object body, HttpHeaders headers,
 			HttpStatusCode status, WebRequest request) {
-		String message = body instanceof ProblemDetail problem ? problem.getDetail()
-				: e instanceof ErrorResponse errorResponse ? errorResponse.getBody().getDetail()
-				: "Request failed";
-		return ResponseEntity.status(status).headers(headers).body(errorDetails(message, request));
+		return ResponseEntity.status(status).headers(headers).body(errorDetails(springMessage(e, body), request));
+	}
+
+	private static String springMessage(Exception e, Object body) {
+		if (body instanceof ProblemDetail problem) {
+			return problem.getDetail();
+		}
+		if (e instanceof ErrorResponse errorResponse) {
+			return errorResponse.getBody().getDetail();
+		}
+		return "Request failed";
 	}
 
 	private ErrorDetailsDTO errorDetails(String message, WebRequest request) {
-		return new ErrorDetailsDTO(LocalDateTime.now(), message, request.getDescription(false));
+		return new ErrorDetailsDTO(Instant.now(), message, request.getDescription(false));
 	}
 
 }

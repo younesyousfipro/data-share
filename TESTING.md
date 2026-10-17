@@ -82,6 +82,11 @@ commande échoue (décision du 2026-10-07).
 | Back (JaCoCo) | 96 % | 94 % | 96 % | 98 % |
 | Front (Vitest, 125 tests) | 99,7 % | 98 % | 99,6 % | 100 % |
 
+SonarQube, qui relit ces deux rapports, affiche des valeurs cohérentes : **96,3 %** (back) et
+**98,9 %** (front), en un seul chiffre qui combine lignes et branches. Il applique les
+mêmes exclusions, plus `main.ts`, hors du périmètre de Vitest (`src/app/`), qu'il
+compterait sinon à 0 % ([`MAINTENANCE.md`](MAINTENANCE.md#qualité-du-code-sonarqube)).
+
 ![Rapport JaCoCo du back](docs/captures/couverture-back.png)
 
 ![Rapport Vitest du front](docs/captures/couverture-front.png)

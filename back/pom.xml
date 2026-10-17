@@ -32,6 +32,14 @@
 		<!-- Security patches ahead of Spring Boot 4.1.2 (see SECURITY.md); remove when upgrading the parent -->
 		<tomcat.version>11.0.25</tomcat.version>
 		<jackson-bom.version>3.1.7</jackson-bom.version>
+		<sonar-maven-plugin.version>5.8.0.7211</sonar-maven-plugin.version>
+		<!-- SonarQube analysis, see MAINTENANCE.md; the token comes from the SONAR_TOKEN variable -->
+		<!-- Explicit: without it, recent scanners default to SonarQube Cloud -->
+		<sonar.host.url>http://localhost:9000</sonar.host.url>
+		<sonar.projectKey>datashare-back</sonar.projectKey>
+		<sonar.projectName>DataShare back</sonar.projectName>
+		<!-- Same exclusion as JaCoCo, so both tools report the same coverage -->
+		<sonar.coverage.exclusions>**/DatashareApplication.java</sonar.coverage.exclusions>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -126,6 +134,15 @@
 	</dependencies>
 
 	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.sonarsource.scanner.maven</groupId>
+					<artifactId>sonar-maven-plugin</artifactId>
+					<version>${sonar-maven-plugin.version}</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

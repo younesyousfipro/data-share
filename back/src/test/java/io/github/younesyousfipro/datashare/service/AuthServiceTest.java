@@ -69,7 +69,8 @@ class AuthServiceTest {
 		when(accountRepository.existsByEmail(EMAIL)).thenReturn(true);
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> authService.register(new RegisterRequestDTO(EMAIL, PASSWORD)))
+		RegisterRequestDTO request = new RegisterRequestDTO(EMAIL, PASSWORD);
+		assertThatThrownBy(() -> authService.register(request))
 				.isInstanceOf(EmailAlreadyUsedException.class);
 		verify(accountRepository, never()).saveAndFlush(any());
 	}
@@ -81,7 +82,8 @@ class AuthServiceTest {
 		when(accountRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("uk_account_email"));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> authService.register(new RegisterRequestDTO(EMAIL, PASSWORD)))
+		RegisterRequestDTO request = new RegisterRequestDTO(EMAIL, PASSWORD);
+		assertThatThrownBy(() -> authService.register(request))
 				.isInstanceOf(EmailAlreadyUsedException.class);
 	}
 
@@ -105,7 +107,8 @@ class AuthServiceTest {
 		when(accountRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> authService.login(new LoginRequestDTO(EMAIL, PASSWORD)))
+		LoginRequestDTO request = new LoginRequestDTO(EMAIL, PASSWORD);
+		assertThatThrownBy(() -> authService.login(request))
 				.isInstanceOf(InvalidCredentialsException.class);
 		verify(jwtService, never()).generateToken(any());
 	}
@@ -116,7 +119,8 @@ class AuthServiceTest {
 		when(accountRepository.findByEmail(EMAIL)).thenReturn(Optional.of(accountWithPassword(PASSWORD)));
 
 		// WHEN / THEN
-		assertThatThrownBy(() -> authService.login(new LoginRequestDTO(EMAIL, "wrongPass")))
+		LoginRequestDTO request = new LoginRequestDTO(EMAIL, "wrongPass");
+		assertThatThrownBy(() -> authService.login(request))
 				.isInstanceOf(InvalidCredentialsException.class);
 		verify(jwtService, never()).generateToken(any());
 	}
