@@ -34,3 +34,6 @@ build/
 
 ### Uploaded files (local storage) ###
 uploads/
+
+### Application logs ###
+logs/
