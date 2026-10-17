@@ -42,7 +42,7 @@ public class SpringSecurityConfig {
 	}
 
 	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) {
 		http
 				// CSRF abuses cookies sent automatically by the browser; the JWT travels in a header
 				.csrf(AbstractHttpConfigurer::disable)

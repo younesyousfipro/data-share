@@ -72,10 +72,17 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 	@Override
 	protected ResponseEntity<Object> handleExceptionInternal(Exception e, Object body, HttpHeaders headers,
 			HttpStatusCode status, WebRequest request) {
-		String message = body instanceof ProblemDetail problem ? problem.getDetail()
-				: e instanceof ErrorResponse errorResponse ? errorResponse.getBody().getDetail()
-				: "Request failed";
-		return ResponseEntity.status(status).headers(headers).body(errorDetails(message, request));
+		return ResponseEntity.status(status).headers(headers).body(errorDetails(springMessage(e, body), request));
+	}
+
+	private static String springMessage(Exception e, Object body) {
+		if (body instanceof ProblemDetail problem) {
+			return problem.getDetail();
+		}
+		if (e instanceof ErrorResponse errorResponse) {
+			return errorResponse.getBody().getDetail();
+		}
+		return "Request failed";
 	}
 
 	private ErrorDetailsDTO errorDetails(String message, WebRequest request) {
