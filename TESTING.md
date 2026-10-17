@@ -98,7 +98,7 @@ commande échoue (décision du 2026-10-07).
 
 | Commande | Depuis | Produit |
 |---|---|---|
-| `./mvnw verify` | `back/` | tests unitaires et d'intégration (Docker requis), rapport `target/site/jacoco/index.html`, contrôle du seuil |
+| `./mvnw verify` | `back/` | tests unitaires et d'intégration (Docker requis), rapport `target/site/jacoco/index.html`, contrôle du seuil ; logs des tests dans `target/test-logs/` |
 | `npm run test:coverage` | `front/` | tests Vitest, rapport `coverage/` et contrôle du seuil |
 | `npm run e2e` | `front/`, back (`./mvnw spring-boot:run`) et front (`npm start`) lancés | les 3 scénarios E2E, navigateur sans fenêtre ; captures des échecs dans `cypress/screenshots/` |
 | `npm run e2e:open` | idem | interface Cypress : chaque étape rejouée à l'écran |
@@ -161,6 +161,16 @@ et ne touchent pas aux fichiers de dev.
 |---|---|---|
 | `FileServiceTest` | unitaire | fiche effacée **puis** fichier sur le disque · fichier expiré supprimable · fichier d'un autre compte : `404`, rien d'effacé · fichier inconnu : `404` · échec du disque : aucune erreur remontée, fiche effacée (orphelin journalisé) |
 | `FileControllerTest` | intégration | `204` : fiche absente de la base **et** fichier absent du disque · fichier d'un autre compte : `404`, fiche et fichier intacts · fichier inconnu : `404` · `400` identifiant qui n'est pas un UUID · `401` sans jeton, rien d'effacé |
+
+### Journalisation (back)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `RequestLoggingFilterTest` | unitaire, logs capturés en mémoire (`ListAppender` de Logback) | méthode, chemin, statut et durée écrits en **champs** (ce qui part dans le JSON) · paramètres d'URL absents du chemin · statut lu après le passage dans le controller · requête qui lève une exception : ligne écrite quand même |
+
+Les événements fichiers de `FileService` (upload, download, delete) sont exécutés par
+ses tests ; leur contenu réel est vérifié sur le log de l'application
+([`PERF.md`](PERF.md#logs-structurés-et-suivi-des-métriques)).
 
 ### US01 — Upload (front)
 

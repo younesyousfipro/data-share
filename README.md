@@ -13,8 +13,8 @@ dépose un fichier et obtient un lien de téléchargement à partager, valable 7
 |---|---|
 | [`TESTING.md`](TESTING.md) | stratégie de test, scénarios E2E, couverture |
 | [`SECURITY.md`](SECURITY.md) | règles de sécurité, scan des dépendances |
-| [`PERF.md`](PERF.md) | test de charge de l'upload (k6), budget de performance front (bundle, Lighthouse) |
-| [`MAINTENANCE.md`](MAINTENANCE.md) | mise à jour des dépendances : procédure, fréquence, risques |
+| [`PERF.md`](PERF.md) | test de charge de l'upload (k6), budget de performance front (bundle, Lighthouse), logs structurés et suivi des métriques |
+| [`MAINTENANCE.md`](MAINTENANCE.md) | mise à jour des dépendances : procédure, fréquence, risques ; exploitation des logs |
 
 ## Prérequis
 

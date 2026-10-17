@@ -5,7 +5,8 @@ Mesures de performance du prototype. Raison de chaque choix :
 
 **Sommaire** : [Test de charge de l'upload](#test-de-charge-de-lupload-k6) ·
 [Limites](#limites-de-la-mesure) · [Relancer le test](#relancer-le-test) ·
-[Budget de performance front](#budget-de-performance-front) · suivi des métriques : à venir
+[Budget de performance front](#budget-de-performance-front) ·
+[Logs structurés et suivi des métriques](#logs-structurés-et-suivi-des-métriques)
 
 ## Test de charge de l'upload (k6)
 
@@ -283,3 +284,224 @@ Le back doit tourner (voir [`README.md`](README.md)), et `ng serve` doit être a
    **Analyze page load**.
 5. Enregistrer le rapport (menu `⋮` → *Save as HTML*) **hors du dépôt**, dans
    `../perf-reports/`.
+
+## Logs structurés et suivi des métriques
+
+### Le problème
+
+Une fois l'application en production, plus de débogueur ni de console sous les yeux :
+des milliers de requêtes passent sans que personne les voie. Puis une question arrive :
+
+- un utilisateur : « l'upload est lent depuis hier » ;
+- un investisseur : « quel est votre temps de réponse moyen ? quel volume transitez-vous ? » ;
+- l'équipe : « reste-t-il des fichiers orphelins sur le disque ? »
+
+**Sans logs**, aucune réponse : il ne reste rien de ce qui s'est passé.
+
+**Avec des logs texte**, la réponse existe mais noyée dans des phrases :
+
+```
+POST /api/files 201 23 ms
+```
+
+Pour faire une moyenne, il faut une expression régulière qui découpe la phrase, et qui
+casse dès que quelqu'un reformule le message.
+
+**Avec des logs structurés**, chaque information est un champ nommé. La réponse tient
+en une commande :
+
+```bash
+# temps moyen de l'upload
+jq -s 'map(select(.path=="/api/files" and .method=="POST") | .durationMs) | add/length' back/logs/datashare.log
+```
+
+Et les mêmes fichiers s'envoient tels quels dans un outil de collecte (Elasticsearch,
+Grafana Loki) qui trace les courbes et déclenche les alertes.
+
+### L'intérêt en une phrase
+
+**Garder une trace exploitable de ce que fait l'application quand personne ne regarde,
+pour répondre après coup à des questions chiffrées.**
+
+Les tests prouvent que l'application marche avant la livraison ; les logs disent comment
+elle se comporte une fois en service.
+
+### Ce que ça donne pour DataShare
+
+| Question | Répondue grâce à | Écrit par |
+|---|---|---|
+| Combien de temps prend un upload ? Lequel est le plus lent ? | `durationMs` de chaque requête | `RequestLoggingFilter` |
+| Combien de 401, de 500 aujourd'hui ? | `status` de chaque requête | `RequestLoggingFilter` |
+| Quel volume uploadé, téléchargé ? Quelle taille moyenne ? | `sizeBytes` de chaque événement fichier | `FileService` |
+| Qu'est-il arrivé au fichier `3f2a…` ? | `fileId` de chaque événement fichier | `FileService` |
+
+### Comment ça marche
+
+```
+Requête HTTP ──► RequestLoggingFilter ──► Controller ──► FileService
+                 1 ligne par requête                     1 ligne par upload, download, delete
+                 method, path, status, durationMs        action, fileId, sizeBytes, accountId
+                        │                                       │
+                        └───────────────┬───────────────────────┘
+                                        ▼
+                             Logback (fourni par Spring Boot)
+                  console : texte lisible       back/logs/datashare.log : JSON (format ECS)
+```
+
+| Qui | Rôle |
+|---|---|
+| **notre code** (filtre, `FileService`) | crée l'événement et le remplit : `log.atInfo().addKeyValue("durationMs", …)` |
+| **SLF4J** | le guichet : reçoit l'événement, sans savoir où il ira |
+| **Logback** | l'imprimeur : l'écrit |
+| **`application.properties`** | dit à Logback comment et où : console en texte, fichier en JSON |
+
+**Le code dit quoi journaliser, la configuration dit comment et où.** Changer de format
+ou de destination ne touche pas au code. La configuration vaut aussi pour les logs de
+Spring lui-même (démarrage, erreurs).
+
+Deux lignes réelles du fichier (champs ECS techniques retirés) :
+
+```json
+{"@timestamp":"2026-10-17T15:30:55.040Z","log":{"level":"INFO"},"message":"File 0fb4e931-…: upload (1048576 bytes)","action":"upload","fileId":"0fb4e931-…","sizeBytes":1048576,"accountId":28}
+{"@timestamp":"2026-10-17T15:30:55.045Z","log":{"level":"INFO"},"message":"POST /api/files 201 44 ms","method":"POST","path":"/api/files","status":201,"durationMs":44}
+```
+
+| Champ | Contenu |
+|---|---|
+| `durationMs` | temps passé **dans le serveur**, de l'arrivée de la requête à la réponse, en millisecondes entières |
+| `path` | chemin sans les paramètres d'URL (qui peuvent contenir une donnée sensible) |
+| `action` | `upload`, `download` ou `delete` : stable, contrairement au message |
+| `sizeBytes` | taille du fichier, en octets |
+| `accountId` | propriétaire du fichier, y compris pour un téléchargement (le destinataire est anonyme) |
+
+Ce qui n'est **jamais** journalisé : [`SECURITY.md`](SECURITY.md#journalisation).
+
+### La mesure : une boîte noire
+
+- Le **test de charge k6** (plus haut), c'est le **chronomètre au bord de la piste** : il
+  mesure depuis l'extérieur.
+- Les **logs**, c'est la **boîte noire** installée dans la voiture : l'application note
+  elle-même chacune de ses requêtes.
+
+Pour vérifier la boîte noire et apprendre à la lire, il fallait faire rouler la voiture :
+
+| Outil | Rôle dans cette mesure |
+|---|---|
+| **k6** | le **volume** : 400 uploads de 1 Mo et 400 suppressions, 10 utilisateurs simultanés |
+| **Cypress** (les 3 scénarios E2E) | la **variété** : inscription, connexion ratée, téléchargement, mauvais mot de passe |
+| **les logs** | l'**instrument de mesure** : temps de réponse et taille de chaque fichier |
+| **[`perf/analyze-logs.sh`](perf/analyze-logs.sh)** | l'**analyse** : 1 654 lignes ramenées à quelques tableaux |
+
+**Ce que la mesure prouve : les logs sont fiables.** Les comptes concordent avec ce qui a
+été envoyé : 400 uploads par k6, 400 dans les logs (plus 3 de Cypress) ; 0 erreur pour
+k6, aucun `5xx` dans les logs ; les seuls `401` et `403` sont ceux que Cypress provoque
+exprès.
+
+### Résultats
+
+Mesure du 2026-10-17, poste de développement, k6 et Cypress lancés en même temps.
+Sortie de `./perf/analyze-logs.sh` :
+
+**Temps de réponse côté serveur** (ms)
+
+| Endpoint | Requêtes | Médiane | 95 % | Max |
+|---|---|---|---|---|
+| `POST /api/files` (upload 1 Mo) | 403 | 18 | **30** | 97 |
+| `DELETE /api/files/{id}` | 401 | 1 | 3 | 30 |
+| `POST /api/auth/login` | 5 | 74 | — | 108 |
+| `POST /api/auth/register` | 4 | 93 | — | 333 |
+| `GET /api/files` | 3 | 26 | — | 32 |
+| `POST /api/download/{id}` (fichier protégé) | 2 | 75 et 93 | — | — |
+| `GET /api/download/{id}` (informations du fichier) | 1 | 8 | — | — |
+
+Pas de 95 % sous une dizaine de requêtes : le chiffre ne voudrait rien dire.
+
+**Statuts** : `200` × 9 · `201` × 407 · `204` × 401 · `401` × 1 · `403` × 1 · aucun `5xx`.
+
+**Fichiers**
+
+| Action | Nombre | Volume total | Taille moyenne |
+|---|---|---|---|
+| upload | 403 | **400 Mo** | 1 Mo (400 × 1 Mo par k6, 3 × 24 octets par Cypress) |
+| delete | 401 | 400 Mo | 1 Mo |
+| download | 1 | 24 octets | fichier de test Cypress |
+
+**Le chronomètre et la boîte noire, sur le même upload**
+
+| Upload 1 Mo | Médiane | 95 % | Max |
+|---|---|---|---|
+| vu par k6 (client) | 22 ms | 36 ms | 102 ms |
+| vu par le filtre (serveur) | 18 ms | 30 ms | 97 ms |
+| écart = trajet réseau | ~4 ms | ~6 ms | ~5 ms |
+
+### Lecture
+
+1. **L'upload reste rapide sous charge** : 30 ms pour 95 % des envois, 30 fois sous le
+   seuil d'une seconde.
+2. **Les opérations les plus lentes hachent un mot de passe** (75 à 100 ms) : connexion,
+   inscription, téléchargement protégé, même refusé. C'est voulu : BCrypt est lent pour
+   freiner les attaques par force brute.
+3. **Les uploads les plus lents** (97 et 80 ms) tombent pendant les inscriptions et
+   connexions de Cypress : ils se partageaient le processeur avec BCrypt. Concordance
+   dans le temps, cohérente, mais pas une preuve.
+4. **La première requête** (inscription, 333 ms) est lente parce que le serveur vient de
+   démarrer. Classique, sans conséquence.
+5. **Chronomètre et boîte noire** : en local, le serveur fait 80 % du temps de réponse,
+   le réseau presque rien. En cas de lenteur signalée, comparer les deux dit où chercher :
+   serveur rapide → réseau ; serveur lent → code, disque ou base.
+
+### Limites
+
+| Limite | Conséquence |
+|---|---|
+| Un seul téléchargement mesuré (k6 ne teste que l'upload) | volume téléchargé non représentatif ; test de charge du download en [perspective](docs/perspectives.md) |
+| Réseau local | en production, l'envoi de 1 Mo sur une vraie connexion dure bien plus que les 30 ms du serveur (voir [Limites de la mesure](#limites-de-la-mesure)) |
+| Millisecondes entières | une requête de 0,9 ms compte pour 0 : sans importance au-delà de quelques ms |
+| k6 et Cypress lancés en même temps | ils se gênent un peu : c'est plus proche d'un usage réel, moins d'un test isolé |
+| Le script relit tout le fichier | adapté à un prototype, pas à des millions de lignes (voir ci-dessous) |
+
+### En production
+
+On ne lance pas de script à la main. Les logs partent en continu vers un **outil de
+collecte** (Grafana Loki, ou la pile Elastic avec Kibana), qui :
+
+- **garde l'historique** de tous les serveurs au même endroit, au-delà des 7 jours du fichier local ;
+- **calcule les mêmes chiffres en continu** et les trace en **tableaux de bord** ;
+- **déclenche des alertes** : 95 % des uploads au-dessus d'une seconde, apparition de
+  `5xx`, orphelin sur le disque ;
+- **restreint l'accès** aux logs, qui contiennent les identifiants des fichiers.
+
+Le format ECS est fait pour ça : ces outils le lisent sans configuration. Rien à changer
+dans le code, seulement la destination. Détail dans [`perspectives.md`](docs/perspectives.md).
+
+### Pistes d'optimisation
+
+| Constat mesuré | Piste | Quand |
+|---|---|---|
+| Upload : 30 ms côté serveur pour 1 Mo, mais fichier écrit deux fois sur le disque (fichier temporaire de Tomcat, puis copie) | upload direct vers un stockage objet (URL signée) : le fichier ne traverse plus l'API | gros fichiers, uploads nombreux |
+| BCrypt : 75 à 100 ms, l'opération la plus coûteuse en processeur | **ne pas** baisser son coût (c'est la protection) ; limiter le débit de `/api/auth` au niveau du reverse proxy, pour qu'un afflux de connexions ne prive pas les uploads de processeur | toute mise en ligne |
+| Première requête lente (333 ms) | ne router le trafic vers le serveur qu'une fois démarré (sonde de santé d'Actuator) | déploiement |
+| Suppression (1 ms), informations d'un fichier (8 ms) | rien : déjà négligeable | — |
+
+Le temps serveur n'est pas le goulot : en conditions réelles, c'est le réseau de
+l'utilisateur. Les pistes utiles portent donc sur le trajet des fichiers, pas sur le code.
+
+### Relancer l'analyse
+
+Depuis la racine du dépôt (`jq` requis, installé d'office sur macOS récent) :
+
+```bash
+./perf/analyze-logs.sh                      # back/logs/datashare.log par défaut
+./perf/analyze-logs.sh autre-fichier.log    # un autre log, ex. celui des tests
+```
+
+Pour une mesure propre :
+
+1. Vider le log, **back lancé** : `: > back/logs/datashare.log` (jamais `rm`, voir
+   [`MAINTENANCE.md`](MAINTENANCE.md#logs)).
+2. Générer du trafic : k6 ([Relancer le test](#relancer-le-test)), puis `npm run e2e`
+   depuis `front/` (front lancé).
+3. Lancer le script.
+
+Les tests automatisés (`./mvnw verify`) écrivent dans `back/target/test-logs/`, jamais
+dans le log de l'application.

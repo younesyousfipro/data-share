@@ -774,9 +774,12 @@ silencieux. Le journal est la seule façon de le voir.
 
 | Pièce | Rôle |
 |---|---|
-| **SLF4J** | l'interface appelée par le code (`log.warn(...)`) |
+| **SLF4J** | l'interface appelée par le code (`log.atInfo()...`) |
 | **Logback** | l'implémentation qui écrit, fournie par Spring Boot (`spring-boot-starter-logging`) |
 | **`@Slf4j`** (Lombok) | génère le champ `log` de la classe |
+| **`application.properties`** | console en texte lisible ; fichier `logs/datashare.log` en JSON (format ECS, supporté nativement par Spring Boot) |
+| **`RequestLoggingFilter`** (package `logging`) | une ligne par requête HTTP : méthode, chemin, statut, durée |
+| **`FileService.logFileEvent`** | une ligne par upload, download, delete : identifiant, taille, propriétaire |
 
 Ce qu'un log apporte, là où un `System.out.println` n'apporterait rien :
 
@@ -790,3 +793,18 @@ Ce qu'un log apporte, là où un `System.out.println` n'apporterait rien :
 
 C'est aussi le déclencheur de la perspective « Purge des orphelins » : on l'automatise
 quand les avertissements se répètent dans les logs.
+
+**Logs structurés.** Chaque valeur est passée en clé-valeur (`addKeyValue("sizeBytes", …)`)
+et devient un champ du JSON : on calcule dessus sans découper de phrases. Le message
+reprend les valeurs pour la console, qui n'affiche pas les clés-valeurs.
+
+**Le filtre passe en premier** (`@Order(HIGHEST_PRECEDENCE)`), avant Spring Security :
+une requête refusée en `401` est mesurée elle aussi. Il écrit dans un `finally` : une
+requête qui lève une exception est notée quand même.
+
+**Les événements fichiers sont notés après le succès** : après l'enregistrement en base
+pour l'upload, après l'ouverture du fichier pour le download. Un upload annulé ou un
+fichier introuvable ne compte pas.
+
+Usage, résultats et analyse : [`PERF.md`](../../PERF.md#logs-structurés-et-suivi-des-métriques) ;
+ce qui n'est jamais journalisé : [`SECURITY.md`](../../SECURITY.md#journalisation).

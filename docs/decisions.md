@@ -1275,3 +1275,61 @@ pages. Lighthouse estime à 50 kB le code inutilisé à l'arrivée, soit environ
 lente, pour un score déjà de 98-99.
 **Conséquence assumée :** à mettre en place si l'application grossit ; le budget de build
 donnera l'alerte.
+
+---
+
+## 2026-10-17 — Logs structurés : format ECS natif de Spring Boot, dans un fichier
+
+**Décidé :** le fichier `back/logs/datashare.log` reçoit une ligne JSON par événement,
+au format ECS (*Elastic Common Schema*), par une seule propriété
+(`logging.structured.format.file=ecs`). La console reste en texte lisible.
+**Écarté :** une bibliothèque d'encodage JSON (`logstash-logback-encoder`), inutile depuis
+le support natif de Spring Boot ; les formats Logstash et GELF, moins documentés ; le
+JSON sur la console, illisible pendant le développement.
+**Pourquoi :** aucune dépendance ajoutée. ECS est un standard ouvert aux noms de champs
+documentés, lu sans configuration par Kibana ou Grafana Loki. Le code dit quoi
+journaliser, la configuration dit comment et où.
+**Conséquence assumée :** les champs ECS sont imbriqués (`.log.level` et non
+`"log.level"`) ; l'horodatage est en UTC.
+
+---
+
+## 2026-10-17 — Temps de réponse : un filtre qui journalise chaque requête
+
+**Décidé :** `RequestLoggingFilter`, premier filtre de la chaîne, écrit pour chaque requête
+la méthode, le chemin (sans paramètres d'URL), le statut et la durée. La taille des
+fichiers est notée par `FileService`, seul à la connaître, avec un champ `action` stable.
+**Écarté :** les métriques Micrometer d'Actuator (`http.server.requests`), agrégats gardés
+en mémoire, perdus au redémarrage sans Prometheus pour les conserver ; un log dans chaque
+controller, répété et facile à oublier sur une nouvelle route.
+**Pourquoi :** une ligne par requête est conservée et analysable après coup, ce que
+demande l'énoncé (« journalisez vos métriques clés »). Placé avant Spring Security, le
+filtre mesure aussi les `401`.
+**Conséquence assumée :** durées en millisecondes entières ; pas de courbe en temps réel
+(Prometheus et Grafana dans `perspectives.md`).
+
+---
+
+## 2026-10-17 — Logs des tests dans `target/`
+
+**Décidé :** Maven passe `LOG_FILE=target/test-logs/datashare.log` aux tests (`pom.xml`,
+surefire), comme `STORAGE_DIRECTORY` pour leurs fichiers.
+**Écarté :** un `logback-test.xml`, qui couvrirait aussi les tests lancés depuis
+l'éditeur, mais ajoute un fichier de configuration à maintenir.
+**Pourquoi :** sans cela, `./mvnw verify` écrivait ses événements de test (taille 5 octets,
+compte 42) dans le log de l'application et faussait l'analyse.
+**Conséquence assumée :** un test lancé depuis l'éditeur, hors Maven, écrit encore dans
+`back/logs/`.
+
+---
+
+## 2026-10-17 — Analyse des logs : un script versionné
+
+**Décidé :** `perf/analyze-logs.sh` (bash et `jq`) affiche la période, le temps de réponse
+par endpoint (médiane, 95 %, max), les statuts, le volume par action et les orphelins.
+**Écarté :** des commandes `jq` copiées depuis la documentation : longues, fragiles,
+décourageantes ; un outil de collecte (Loki, Kibana), disproportionné pour un prototype.
+**Pourquoi :** n'importe qui relance l'analyse en une commande, avec les mêmes calculs
+que ceux publiés dans `PERF.md`. Si un champ change de nom, une seule correction.
+**Conséquence assumée :** le script relit tout le fichier : adapté à un prototype, pas à
+un serveur en production (outil de collecte dans `perspectives.md`).
