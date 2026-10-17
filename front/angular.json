@@ -72,7 +72,7 @@
           "options": {
             "coverageInclude": ["src/app/**/*.ts"],
             "coverageExclude": ["src/app/app.config.ts", "src/app/app.routes.ts"],
-            "coverageReporters": ["html", "text"],
+            "coverageReporters": ["html", "text", "lcovonly"],
             "coverageThresholds": {
               "statements": 70,
               "branches": 70,
