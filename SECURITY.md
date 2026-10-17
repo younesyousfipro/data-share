@@ -72,6 +72,26 @@ le JWT voyage dans un en-tête et non dans un cookie, en-têtes de protection de
 Security conservés. Détail dans [`architecture.md`](docs/conception/architecture.md),
 section « Sécurité : rôle de chaque couche ».
 
+### Journalisation
+
+Les logs (détail dans [`PERF.md`](PERF.md#logs-structurés-et-suivi-des-métriques))
+servent à diagnostiquer ; ils ne doivent pas devenir une fuite.
+
+| Jamais journalisé | Pourquoi |
+|---|---|
+| mots de passe (compte, fichier) et leurs empreintes | un log se copie, s'archive, se transmet : un secret n'a rien à y faire |
+| JWT | un jeton lu dans un log permet d'agir au nom du compte |
+| emails | donnée personnelle (RGPD) : le compte est désigné par son identifiant numérique |
+| paramètres d'URL | ils peuvent porter une donnée sensible : seul le chemin est noté |
+| contenu et nom des fichiers | ils appartiennent à l'utilisateur ; seuls l'identifiant et la taille sont notés |
+
+**Point d'attention : l'identifiant du fichier (`fileId`) est journalisé**, et c'est
+aussi son lien de partage. Qui lit les logs peut télécharger les fichiers non protégés
+encore valides. On le garde parce qu'il est indispensable au diagnostic (retrouver un
+orphelin sur le disque, suivre un fichier). La parade est l'accès : `back/logs/` est
+ignoré par Git, et en production les logs vont dans un outil de collecte à accès
+restreint ([`perspectives.md`](docs/perspectives.md)).
+
 ### Limites connues
 
 | Limite | Conséquence | Piste d'évolution |

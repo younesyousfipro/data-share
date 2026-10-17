@@ -1,10 +1,11 @@
 # Maintenance
 
-Comment garder les dépendances de DataShare à jour sans casser l'application.
-Résultats du dernier scan : [`SECURITY.md`](SECURITY.md).
+Comment garder les dépendances de DataShare à jour sans casser l'application, et
+comment exploiter ses logs. Résultats du dernier scan : [`SECURITY.md`](SECURITY.md).
 
 **Sommaire** : [Ce qu'on maintient](#ce-quon-maintient) · [Fréquence](#fréquence) ·
-[Procédure](#procédure) · [Risques](#risques) · [En suspens](#en-suspens)
+[Procédure](#procédure) · [Risques](#risques) · [En suspens](#en-suspens) ·
+[Logs](#logs)
 
 ## Ce qu'on maintient
 
@@ -31,6 +32,7 @@ exactement celles-là.
 | dès qu'une faille CRITICAL touche une de nos briques | scan et correction sans attendre |
 | chaque mois | versions de correction (dernier chiffre : 4.1.1 → 4.1.2) |
 | à chaque version majeure (Angular, Spring Boot, Java) | branche dédiée, en suivant le guide de migration officiel |
+| chaque semaine | lecture des logs : erreurs `5xx`, fichiers orphelins ([Logs](#logs)) |
 
 ## Procédure
 
@@ -102,6 +104,7 @@ l'analyseur d'esbuild montrent laquelle (détail dans [`PERF.md`](PERF.md#le-poi
 | **version forcée oubliée** dans `pom.xml` | commentaire à côté, et rubrique « En suspens » ci-dessous |
 | **mise à jour majeure trop lourde** (migration Angular ou Spring Boot) | guide de migration officiel, branche dédiée, ne pas sauter de version majeure |
 | **front alourdi** par une nouvelle dépendance | budget de build (`front/angular.json`) : avertissement à 420 kB, échec à 520 kB |
+| **disque rempli par les logs** | rotation automatique (ci-dessous) ; en production, plafond de taille total (`logging.logback.rollingpolicy.total-size-cap`) |
 | **scan oublié** (rien n'est automatisé) | fréquence ci-dessus ; automatisation dans [`perspectives.md`](docs/perspectives.md) |
 
 ## En suspens
@@ -110,3 +113,27 @@ l'analyseur d'esbuild montrent laquelle (détail dans [`PERF.md`](PERF.md#le-poi
 |---|---|
 | retirer `tomcat.version` et `jackson-bom.version` de `back/pom.xml` | au passage à Spring Boot 4.1.2 |
 | passer Trivy en version plus récente : relever la nouvelle empreinte sur Docker Hub | au prochain scan, sur une version publiée depuis plus d'une semaine |
+
+## Logs
+
+| | |
+|---|---|
+| Fichier | `back/logs/datashare.log`, une ligne JSON par événement ; chemin modifiable par `LOG_FILE` (`back/.env`) |
+| Rotation | automatique (Spring Boot) : nouveau fichier à 10 Mo, archives gardées 7 jours |
+| Logs des tests | `back/target/test-logs/`, effacés par `mvn clean` |
+| Analyse | `./perf/analyze-logs.sh` depuis la racine (détail dans [`PERF.md`](PERF.md#relancer-lanalyse)) |
+
+**Vider le log sans arrêter le back : `: > back/logs/datashare.log`, jamais `rm`.**
+Logback ouvre le fichier au démarrage et le garde ouvert. `rm` ne retire que son nom :
+le back continue d'écrire dans un fichier devenu invisible, perdu à l'arrêt, et le disque
+n'est pas libéré. `: >` vide le contenu en gardant le fichier. Après un `rm` par erreur,
+redémarrer le back recrée le fichier.
+
+**Corriger un fichier orphelin** (effacé de la base, resté sur le disque après une panne
+du disque, voir [`architecture.md`](docs/conception/architecture.md#cohérence-entre-disque-et-base)) :
+
+1. `./perf/analyze-logs.sh` : la rubrique *Orphan files* liste leurs identifiants.
+2. Supprimer chacun dans le dossier de stockage, où il porte son identifiant pour nom :
+   `rm back/uploads/<fileId>`.
+3. Si un orphelin revient souvent, chercher la cause (droits, disque plein) dans la trace
+   d'erreur de la même ligne de log.

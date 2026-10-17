@@ -176,6 +176,8 @@
 						<JWT_SECRET>test-only-secret-key-of-at-least-32-bytes</JWT_SECRET>
 						<!-- Files uploaded by the tests stay in target/, removed by mvn clean -->
 						<STORAGE_DIRECTORY>${project.build.directory}/test-uploads</STORAGE_DIRECTORY>
+						<!-- Test logs stay in target/, out of the application log file -->
+						<LOG_FILE>${project.build.directory}/test-logs/datashare.log</LOG_FILE>
 					</environmentVariables>
 				</configuration>
 			</plugin>
