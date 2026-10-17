@@ -7,7 +7,7 @@ import { FileSizePipe } from '../../shared/file-size.pipe';
 
 // Same rules as the API (multipart limit, FileService, UploadRequestDTO): checked here for comfort only
 const MAX_SIZE_BYTES = 1024 ** 3;
-const FORBIDDEN_EXTENSIONS = ['exe', 'bat', 'cmd', 'com', 'msi', 'sh', 'ps1', 'vbs', 'jar'];
+const FORBIDDEN_EXTENSIONS = new Set(['exe', 'bat', 'cmd', 'com', 'msi', 'sh', 'ps1', 'vbs', 'jar']);
 
 const EXPIRATION_CHOICES = [
   { days: 1, label: 'Une journée' },
@@ -56,7 +56,7 @@ export class Upload {
     if (file.size > MAX_SIZE_BYTES) {
       return 'La taille des fichiers est limitée à 1 Go.';
     }
-    if (FORBIDDEN_EXTENSIONS.includes(extensionOf(file.name))) {
+    if (FORBIDDEN_EXTENSIONS.has(extensionOf(file.name))) {
       return 'Les fichiers exécutables et les scripts (.exe, .bat, .sh…) ne sont pas acceptés.';
     }
     return null;
