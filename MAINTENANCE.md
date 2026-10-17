@@ -206,7 +206,8 @@ docker run --rm --platform linux/amd64 \
 issue?* explique chaque règle. Une remarque non corrigée est marquée *Accept* ou
 *False Positive*, avec sa raison en commentaire.
 
-**7. Arrêter** : `docker stop sonarqube` libère la mémoire (environ 2 Go).
+**7. Arrêter** : `docker stop -t 60 sonarqube` libère la mémoire (environ 2 Go) ; sans
+`-t 60`, Docker le tue au bout de 10 s, avant qu'il ait fermé sa base (code `137`).
 `docker start sonarqube` reprend avec les analyses et les décisions ; **`docker rm` les
 efface**.
 
