@@ -54,8 +54,10 @@ class LocalFileStorageTest {
 		// GIVEN
 		storage.store(ID, content("first"));
 
+		InputStream second = content("second");
+
 		// WHEN / THEN
-		assertThatThrownBy(() -> storage.store(ID, content("second")))
+		assertThatThrownBy(() -> storage.store(ID, second))
 				.isInstanceOf(UncheckedIOException.class);
 		assertThat(storageDir.resolve(ID.toString())).hasContent("first");
 	}
@@ -100,8 +102,10 @@ class LocalFileStorageTest {
 		Files.delete(storageDir);
 		Files.createFile(storageDir);
 
+		InputStream hello = content("hello");
+
 		// WHEN / THEN
-		assertThatThrownBy(() -> storage.store(ID, content("hello")))
+		assertThatThrownBy(() -> storage.store(ID, hello))
 				.isInstanceOf(UncheckedIOException.class);
 	}
 
