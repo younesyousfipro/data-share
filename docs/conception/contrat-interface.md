@@ -26,7 +26,7 @@ le JWT (sujet = identifiant du compte), jamais dans un paramètre.
 
 ```json
 {
-  "timestamp": "2026-10-03T10:15:30",
+  "timestamp": "2026-10-03T10:15:30Z",
   "message": "This file has expired",
   "details": "uri=/api/download/3f2b9c1e-…"
 }

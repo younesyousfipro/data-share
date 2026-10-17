@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -64,7 +65,7 @@ class AuthControllerTest {
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.message").value("This email is already used"))
 				.andExpect(jsonPath("$.details").value("uri=" + REGISTER_URL))
-				.andExpect(jsonPath("$.timestamp").exists());
+				.andExpect(jsonPath("$.timestamp").value(endsWith("Z")));
 	}
 
 	@Test

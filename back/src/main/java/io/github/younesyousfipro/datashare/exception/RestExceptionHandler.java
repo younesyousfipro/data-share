@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -79,7 +79,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 	}
 
 	private ErrorDetailsDTO errorDetails(String message, WebRequest request) {
-		return new ErrorDetailsDTO(LocalDateTime.now(), message, request.getDescription(false));
+		return new ErrorDetailsDTO(Instant.now(), message, request.getDescription(false));
 	}
 
 }

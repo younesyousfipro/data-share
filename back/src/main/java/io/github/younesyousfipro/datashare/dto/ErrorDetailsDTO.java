@@ -1,6 +1,6 @@
 package io.github.younesyousfipro.datashare.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
-public record ErrorDetailsDTO(LocalDateTime timestamp, String message, String details) {
+public record ErrorDetailsDTO(Instant timestamp, String message, String details) {
 }
