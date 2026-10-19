@@ -1460,3 +1460,32 @@ est clos.
 `<output>` désigne le résultat d'un calcul de formulaire, et plusieurs de ces messages
 sont hors formulaire ; un `<fieldset>` demande une `<legend>` visible et des styles à
 neutraliser pour trois boutons.
+
+---
+
+## 2026-10-19 — springdoc gardé : contrôle du contrat et Swagger UI
+
+**Décidé :** springdoc génère la description de l'API depuis le code et sert un
+Swagger UI ; il reste dans le projet après le contrôle promis le 2026-10-02 et le
+2026-10-03. `openapi.yaml` reste le contrat : sur le comportement, c'est le code qui
+se corrige ; sur un nom interne (`operationId`), le contrat reprend le code.
+**Écarté :** retirer springdoc après le contrôle ; un contrôle par relecture seule.
+**Pourquoi :** le contrôle se refait en une minute après chaque changement d'API, et
+le Swagger UI, servi par le back, permet d'essayer les routes sans Postman ni blocage
+CORS. Il a trouvé trois écarts ([`contrat-interface.md`](conception/contrat-interface.md#conformité-du-code-au-contrat)).
+**Conséquence assumée :** une annotation de documentation dans le code
+(`@SecurityRequirement`), et un Swagger UI public, à couper en production
+([`SECURITY.md`](../SECURITY.md)).
+
+---
+
+## 2026-10-19 — Sonde de santé publique
+
+**Décidé :** `/actuator/health` est accessible sans jeton ; il répond `UP` ou `DOWN`,
+sans détail.
+**Écarté :** ouvrir `/actuator/**` ; afficher le détail (base, disque).
+**Pourquoi :** la route était protégée depuis l'ajout de la sécurité, alors que le
+README s'en sert pour vérifier le démarrage. Une sonde de santé doit répondre sans
+authentification, comme le ferait un orchestrateur qui teste l'application. Seule
+cette route est ouverte : une route Actuator exposée plus tard restera protégée.
+**Conséquence assumée :** n'importe qui peut savoir si l'API est démarrée.

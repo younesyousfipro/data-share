@@ -4,6 +4,10 @@ Résumé du contrat complet [`openapi.yaml`](openapi.yaml), écrit avant le code
 (design-first) et utilisé comme documentation. Pour le lire en mode navigable :
 extension VS Code *OpenAPI (Swagger) Editor*, ou [editor.swagger.io](https://editor.swagger.io).
 
+Pour **essayer les routes** : back lancé, le Swagger UI généré depuis le code est sur
+http://localhost:8080/swagger-ui.html (*Try it out* ; bouton *Authorize* pour coller le
+JWT obtenu par `/api/auth/login`).
+
 ## Endpoints
 
 | Méthode | Route | Accès | Entrée | Réponse | US |
@@ -50,6 +54,7 @@ jamais la valeur saisie.
 | `409` | email déjà utilisé |
 | `410` | fichier expiré |
 | `413` | fichier de plus de 1 Go |
+| `500` | erreur imprévue : message générique `Internal server error`, le détail reste dans les logs |
 
 ## Règles de validation (client et serveur)
 
@@ -79,3 +84,31 @@ envoyée seule), garde son nom.
 
 `status` vaut `ACTIVE`, `EXPIRING_SOON` (moins de 24 h restantes) ou `EXPIRED`. Il
 est calculé à partir de `expiresAt`, jamais stocké.
+
+## Conformité du code au contrat
+
+**Règle** : `openapi.yaml` est le contrat ; le Swagger UI montre ce que fait le code.
+Sur le **comportement** (routes, codes, champs, règles de validation), le contrat fait
+foi et c'est le code qui se corrige. Sur un **nom interne** (`operationId`), le contrat
+reprend celui du code.
+
+**Contrôle** : comparer `openapi.yaml` à la description générée par springdoc, back
+lancé (http://localhost:8080/v3/api-docs, ou `/v3/api-docs.yaml`). À refaire après
+chaque changement d'API.
+
+**Résultat du 2026-10-19** : routes, méthodes, codes de succès, sécurité, champs et
+contraintes identiques. Trois écarts corrigés :
+
+| Écart | Corrigé dans |
+|---|---|
+| `operationId` différents (`uploadFile` / `upload`…) | le contrat |
+| mot de passe de connexion vide : `400` dans le code, accepté par le contrat | le contrat (`minLength: 1`) |
+| `/actuator/health` en `401`, alors que le README annonce `UP` | le code (route publique) |
+
+**Ce que springdoc ne voit pas** — écarts attendus, sans correction :
+
+| Absent du spec généré | Pourquoi |
+|---|---|
+| codes d'erreur (`400` à `413`) | springdoc ne voit que le cas nominal ; ils sont dans le contrat et vérifiés par les tests d'intégration |
+| type des réponses (`*/*` au lieu de `application/json`, `application/octet-stream`) | le téléchargement fixe son type à l'exécution |
+| champs obligatoires des réponses, descriptions, exemples | rien dans le code ne les porte |

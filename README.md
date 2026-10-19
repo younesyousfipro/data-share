@@ -157,7 +157,11 @@ est autorisé dans `package.json` (`allowScripts`), npm bloquant les autres par 
 
 ## Utiliser l'API sans le front
 
-Avec le back lancé, l'API répond directement sur le port 8080 :
+Le plus simple : le **Swagger UI**, http://localhost:8080/swagger-ui.html, back lancé.
+Chaque route s'y essaie depuis le navigateur (*Try it out*) ; pour les routes
+protégées, coller le jeton de `/api/auth/login` dans *Authorize*.
+
+En ligne de commande, l'API répond directement sur le port 8080 :
 
 ```bash
 curl -i -X POST http://localhost:8080/api/auth/register \

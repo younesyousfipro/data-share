@@ -177,6 +177,13 @@ Les événements fichiers de `FileService` (upload, download, delete) sont exéc
 ses tests ; leur contenu réel est vérifié sur le log de l'application
 ([`PERF.md`](PERF.md#logs-structurés-et-suivi-des-métriques)).
 
+### Description de l'API et sonde de santé (back)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `OpenApiDocsTest` | intégration | description de l'API (JSON et YAML) et Swagger UI accessibles sans jeton · routes `/api/files` marquées protégées, `/api/download` non |
+| `HealthCheckTest` | intégration | `/actuator/health` sans jeton : `UP`, sans détail sur la base ni le disque |
+
 ### US01 — Upload (front)
 
 | Test | Niveau | Cas couverts |
