@@ -13,4 +13,6 @@ export const routes: Routes = [
   { path: 'my-files', component: MyFiles, canActivate: [authGuard], title: 'Mes fichiers - DataShare' },
   // Public: the recipient of a share link needs no account
   { path: 'download/:id', component: Download, title: 'Télécharger un fichier - DataShare' },
+  // Unknown URL: the home page instead of an empty page
+  { path: '**', redirectTo: '' },
 ];
