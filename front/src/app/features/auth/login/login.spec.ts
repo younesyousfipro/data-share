@@ -67,6 +67,12 @@ describe('Login', () => {
     expect(infoText()).toBe('Votre compte a été créé, vous pouvez vous connecter.');
   });
 
+  it('should explain the return to the login page when the session has expired', async () => {
+    await openPage('/login?expired=true');
+
+    expect(infoText()).toBe('Votre session a expiré, veuillez vous reconnecter.');
+  });
+
   it('should show no information message on a direct visit', async () => {
     await openPage();
 
