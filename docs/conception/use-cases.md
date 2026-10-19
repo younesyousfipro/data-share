@@ -44,7 +44,7 @@ Un utilisateur connecté dépose un fichier et obtient un lien de téléchargeme
 - expiration **7 jours par défaut, configurable à l'envoi** (max 7 jours)
 - **mot de passe optionnel** (min. 6 caractères)
 - fichier expiré **refusé au téléchargement**, listé « expiré » dans l'historique ;
-  fichier physique effacé par la purge quotidienne (US10 partielle)
+  fichier physique effacé par la purge, toutes les heures (US10 partielle)
 - fichier lié à l'utilisateur, retrouvable dans son historique
 - taille max **1 Go** · extensions interdites à définir (`.exe`, `.bat`…)
 
