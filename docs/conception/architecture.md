@@ -79,6 +79,7 @@ verrouille toutes les routes derrière un formulaire de connexion.
 | CSRF désactivé | Une attaque CSRF exploite les cookies que le navigateur envoie seul. Le JWT voyage dans un en-tête ajouté par le code du front : rien d'automatique à exploiter. |
 | `STATELESS` | Aucune session côté serveur ; chaque requête apporte sa preuve (le JWT). |
 | `/api/auth/**`, `/api/download/**` publics, le reste authentifié | Une règle par niveau d'accès (décision du 2026-10-03). |
+| Swagger UI, description de l'API et `/actuator/health` publics | Outils techniques, sans donnée : le Swagger UI s'ouvre sans jeton, une sonde de santé est appelée par des machines qui n'en ont pas (décisions du 2026-10-19). |
 | `oauth2ResourceServer` + `JwtDecoder` (HS256, même clé que l'encodeur) | Lit l'en-tête `Authorization: Bearer`, vérifie signature et expiration (tolérance de 60 s), puis remet le jeton au controller (`@AuthenticationPrincipal Jwt`), qui en lit l'identifiant du compte. Jeton absent, falsifié ou expiré : `401` à corps vide, avec l'en-tête standard `WWW-Authenticate: Bearer` (décision du 2026-10-12). |
 
 **En-têtes ajoutés par défaut** à chaque réponse, conservés tels quels :
@@ -767,6 +768,34 @@ orphelins »).
 `FileStorage` exécute, il ne décide jamais. Effacer un fichier déjà absent n'est pas
 une erreur (`deleteIfExists`) : la purge peut repasser après une suppression, ou tourner
 deux fois, sans rien casser.
+
+## Sonde de santé (Actuator)
+
+**Actuator** (`spring-boot-starter-actuator`) ajoute des routes techniques sous
+`/actuator/`, pour observer l'application en marche. Aucune ligne de code : la
+dépendance suffit, Spring Boot la configure au démarrage.
+
+`/actuator/health` répond à « l'API peut-elle servir maintenant ? ». À chaque appel,
+Spring interroge des **indicateurs**, détectés d'après ce que contient l'application :
+
+| Indicateur | Présent parce que | Vérifie |
+|---|---|---|
+| `db` | une `DataSource` existe | une requête de test sur PostgreSQL |
+| `diskSpace` | toujours | l'espace libre, là où sont stockés les fichiers déposés |
+| `ping` | toujours | rien : répond toujours `UP` |
+
+Un seul indicateur `DOWN` donne `{"status":"DOWN"}` et un code `503` : le processus
+tourne, mais ne peut plus servir.
+
+- **Passive** : rien ne l'appelle tout seul. Aujourd'hui, la vérification du README et
+  `HealthCheckTest` ; en production, un orchestrateur, un load balancer ou un outil de
+  supervision, à intervalle régulier.
+- **Exposition** : seule `health` est publiée en HTTP (défaut de Spring Boot), publique
+  et sans détail. Les autres routes (`env` : la configuration, `heapdump` : la mémoire,
+  clé JWT comprise) ne sont pas publiées, et resteraient protégées par Spring Security.
+- **Sur Kubernetes** : Spring Boot ajoute `/actuator/health/liveness` (redémarrer le
+  conteneur ?) et `/actuator/health/readiness` (lui envoyer du trafic ?). La règle
+  actuelle n'ouvre que `/actuator/health` exactement : ces deux routes seraient à ouvrir.
 
 ## Journalisation
 
