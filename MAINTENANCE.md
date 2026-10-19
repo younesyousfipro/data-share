@@ -13,6 +13,7 @@ analyser la qualité de son code et comment exploiter ses logs. Résultats du de
 |---|---|---|---|
 | Spring Boot | 4.1.1 | `back/pom.xml`, `<parent>` | fixe la version de toutes les dépendances du back |
 | Java | 25 | `back/pom.xml`, `java.version` | version LTS |
+| springdoc-openapi | 3.1.1 | `back/pom.xml`, `springdoc.version` | hors du parent Spring Boot : sa version majeure suit celle de Spring Boot (3.x pour Spring Boot 4) |
 | Angular | 22.2 | `front/package.json` | une version majeure tous les 6 mois |
 | Node.js | 24 | poste de dev ([`README.md`](README.md)) | version LTS |
 | Cypress | 16.2 | `front/package.json` | script d'installation autorisé version par version |

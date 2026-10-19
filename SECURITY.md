@@ -17,6 +17,7 @@ stories, puis résultats des scans. Détail technique :
 | Règle | Mise en œuvre |
 |---|---|
 | Routes publiques : inscription, connexion, téléchargement par lien | `/api/auth/**`, `/api/download/**` |
+| Routes publiques techniques : description de l'API, sonde de santé | Swagger UI (`/swagger-ui/**`, `/v3/api-docs/**`, `/v3/api-docs.yaml`) ; `/actuator/health` seul, qui répond `UP` ou `DOWN` sans détail. Les autres routes Actuator restent protégées |
 | Toutes les autres exigent un JWT | `Authorization: Bearer <jeton>` ; signature (HS256) et expiration vérifiées à chaque requête, sinon `401` |
 | Le JWT porte l'identifiant du compte, valable 1 h | clé de signature dans `.env`, jamais versionnée ; l'API refuse de démarrer sans elle |
 | L'identité est lue dans le JWT, jamais dans la requête | personne ne peut déposer, lister ou supprimer au nom d'un autre compte |
@@ -102,6 +103,7 @@ restreint ([`perspectives.md`](docs/perspectives.md)).
 | JWT dans `localStorage` | lisible par un script injecté dans la page (XSS) ; Angular échappe par défaut ce qu'il affiche | cookie `HttpOnly` (CSRF à réactiver) |
 | Déconnexion côté front seulement | un jeton copié reste valable jusqu'à son expiration (1 h au plus) | liste de jetons révoqués |
 | Mot de passe limité à 18 caractères | sous les 64 recommandés par l'OWASP et le NIST | compter les octets, ou Argon2 |
+| Swagger UI public | décrit toutes les routes à n'importe qui (les routes protégées le restent) | le couper en production : `springdoc.api-docs.enabled=false`, `springdoc.swagger-ui.enabled=false` |
 | HTTP en développement | aucun chiffrement | reverse proxy HTTPS ([`perspectives.md`](docs/perspectives.md)) |
 
 ## Scan des dépendances

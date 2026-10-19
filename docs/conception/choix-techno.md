@@ -17,6 +17,7 @@ réécrire si le prototype est retenu). Le détail de chaque arbitrage est dans
 | Stockage fichiers | **disque local** | AWS S3, MinIO | immédiat, sans compte ni coût |
 | Envoi des fichiers | **`multipart/form-data`** | JSON + base64 | octets bruts, standard du web, géré de bout en bout par Angular et Spring |
 | Authentification | **JWT** + BCrypt | sessions serveur | API sans état, exigé par le brief |
+| Contrat d'API | **`openapi.yaml`** écrit avant le code, contrôlé avec **springdoc** (Swagger UI) | génération du code depuis le contrat, contrat généré seul | le contrat existe avant le code, et l'écart se mesure ([`contrat-interface.md`](contrat-interface.md)) |
 | Tests | JUnit, Mockito, Testcontainers · Vitest · Cypress · k6 | Jest (front), Selenium (E2E) | un outil par niveau de test ; Vitest est fourni par Angular |
 
 ---
