@@ -102,7 +102,7 @@ export class Upload {
   protected copyLink(link: string): void {
     navigator.clipboard.writeText(link).then(
       () => this.copyMessage.set('Lien copié.'),
-      () => this.copyMessage.set('Copie impossible : sélectionne le lien pour le copier.'),
+      () => this.copyMessage.set('Copie impossible : sélectionnez le lien pour le copier.'),
     );
   }
 

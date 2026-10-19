@@ -76,7 +76,7 @@ describe('Upload', () => {
 
   describe('file choice', () => {
     it('should invite to choose a file on arrival', () => {
-      expect(title()).toBe('Tu veux partager un fichier ?');
+      expect(title()).toBe('Vous voulez partager un fichier ?');
     });
 
     it('should open the file picker from the home button', () => {
@@ -207,7 +207,7 @@ describe('Upload', () => {
 
       expect(upload).toHaveBeenCalledTimes(1);
       expect(page.querySelector('[role="status"]')?.textContent?.trim()).toBe(
-        'Envoi en cours, ne ferme pas cette page…',
+        'Envoi en cours, ne fermez pas cette page…',
       );
       expect(uploadButton().disabled).toBe(true);
     });
@@ -218,7 +218,7 @@ describe('Upload', () => {
       await submitForm();
 
       expect(page.querySelector('.success')?.textContent?.trim()).toBe(
-        'Félicitations, ton fichier sera conservé chez nous pendant 3 jours !',
+        'Félicitations, votre fichier sera conservé chez nous pendant 3 jours !',
       );
       expect(page.querySelector('form')).toBeNull();
     });
@@ -273,7 +273,7 @@ describe('Upload', () => {
 
       page.querySelector<HTMLButtonElement>('.restart-button')!.click();
       await fixture.whenStable();
-      expect(title()).toBe('Tu veux partager un fichier ?');
+      expect(title()).toBe('Vous voulez partager un fichier ?');
 
       await chooseFile('autre.pdf');
       const select = page.querySelector<HTMLSelectElement>('#expiration')!;
@@ -286,7 +286,7 @@ describe('Upload', () => {
       await sendFile();
       await copyLink();
 
-      expect(copyMessage()).toBe('Copie impossible : sélectionne le lien pour le copier.');
+      expect(copyMessage()).toBe('Copie impossible : sélectionnez le lien pour le copier.');
     });
   });
 
