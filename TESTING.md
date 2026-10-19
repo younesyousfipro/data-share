@@ -80,7 +80,7 @@ commande échoue (décision du 2026-10-07).
 | | Instructions | Branches | Lignes | Méthodes |
 |---|---|---|---|---|
 | Back (JaCoCo) | 96 % | 94 % | 96 % | 98 % |
-| Front (Vitest, 125 tests) | 99,7 % | 98 % | 99,6 % | 100 % |
+| Front (Vitest, 127 tests) | 99,7 % | 98 % | 99,6 % | 100 % |
 
 SonarQube, qui relit ces deux rapports, affiche des valeurs cohérentes : **96,3 %** (back) et
 **98,9 %** (front), en un seul chiffre qui combine lignes et branches. Il applique les
@@ -127,7 +127,7 @@ compterait sinon à 0 % ([`MAINTENANCE.md`](MAINTENANCE.md#qualité-du-code-sona
 | `AuthServiceTest` | unitaire | jeton renvoyé quelle que soit la casse de l'email · email inconnu et mot de passe faux refusés, sans émettre de jeton |
 | `AuthControllerTest` | intégration | `200` + jeton · `401` au même message pour email inconnu et mot de passe faux · `401` (et non `500`) pour un mot de passe de plus de 72 octets, limite de BCrypt · `400` email invalide |
 | `auth.service.spec.ts` (front) | unitaire | `POST /api/auth/login` : jeton enregistré, `isLoggedIn` vrai · `401` : rien n'est enregistré · jeton déjà présent au démarrage : connecté |
-| `login.spec.ts` (front) | unitaire | message « compte créé » seulement avec `?registered=true` · formulaire vide : deux erreurs · email mal formé, erreur reliée au champ · espaces retirés de l'email · mot de passe court accepté (longueur contrôlée à l'inscription) · aucun appel si le formulaire est invalide · envoi puis redirection vers `/` · `401` : « email ou mot de passe incorrect » · autre erreur : message générique · double clic : une seule requête |
+| `login.spec.ts` (front) | unitaire | message « compte créé » seulement avec `?registered=true` · message « session expirée » avec `?expired=true` · formulaire vide : deux erreurs · email mal formé, erreur reliée au champ · espaces retirés de l'email · mot de passe court accepté (longueur contrôlée à l'inscription) · aucun appel si le formulaire est invalide · envoi puis redirection vers `/` · `401` : « email ou mot de passe incorrect » · autre erreur : message générique · double clic : une seule requête |
 | `header.spec.ts` (front) | unitaire | « Se connecter » vers `/login` si déconnecté · bascule sur « Mon espace » dès la connexion, sans recréer le composant |
 
 ### US01 — Upload (back)
@@ -181,8 +181,9 @@ ses tests ; leur contenu réel est vérifié sur le log de l'application
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
-| `auth.interceptor.spec.ts` | unitaire | jeton envoyé aux routes protégées · aucun jeton vers `/api/auth/**` et `/api/download/**` · requête inchangée sans jeton · `401` d'une route protégée : jeton effacé, redirection vers `/login`, erreur transmise à la page · `401` de `/api/auth/login` laissé à la page · autre erreur : jeton conservé |
+| `auth.interceptor.spec.ts` | unitaire | jeton envoyé aux routes protégées · aucun jeton vers `/api/auth/**` et `/api/download/**` · requête inchangée sans jeton · `401` d'une route protégée : jeton effacé, redirection vers `/login?expired=true`, erreur transmise à la page · `401` de `/api/auth/login` laissé à la page · autre erreur : jeton conservé |
 | `auth.guard.spec.ts` | unitaire, vrai routeur | page affichée avec un jeton · sans jeton, redirection vers `/login` |
+| `app.routes.spec.ts` | unitaire, vraies routes de l'application | URL inconnue : redirection vers l'accueil |
 | `auth.service.spec.ts` | unitaire | `logout` : jeton effacé, `isLoggedIn` faux |
 | `file.service.spec.ts` | unitaire | `POST /api/files` en multipart : fichier, mot de passe, durée · aucun champ `password` si le mot de passe est vide |
 | `file-size.pipe.spec.ts` | unitaire | octets, puis Ko, Mo, Go par paliers de 1024, une décimale à la française |
