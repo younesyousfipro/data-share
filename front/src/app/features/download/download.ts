@@ -89,7 +89,7 @@ export class Download {
     }
     return password.hasError('required')
       ? 'Saisissez le mot de passe.'
-      : 'Le mot de passe contient 18 caractères au maximum.';
+      : 'Le mot de passe ne peut pas dépasser 18 caractères.';
   }
 }
 

@@ -102,7 +102,7 @@ export class Upload {
   protected copyLink(link: string): void {
     navigator.clipboard.writeText(link).then(
       () => this.copyMessage.set('Lien copié.'),
-      () => this.copyMessage.set('Copie impossible : sélectionne le lien pour le copier.'),
+      () => this.copyMessage.set('Copie impossible : sélectionnez le lien pour le copier.'),
     );
   }
 
@@ -131,7 +131,7 @@ function uploadErrorMessage(status: number): string {
     case 413:
       return 'La taille des fichiers est limitée à 1 Go.';
     case 400:
-      return 'Le serveur a refusé ce fichier : vérifiez son nom et son type.';
+      return 'Ce fichier a été refusé : vérifiez son nom et son type.';
     default:
       return 'Une erreur est survenue, veuillez réessayer.';
   }

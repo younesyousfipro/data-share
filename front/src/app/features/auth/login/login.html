@@ -2,8 +2,8 @@
   <h1 id="login-title" class="card-title">Connexion</h1>
 
   <form class="form" [formGroup]="form" (ngSubmit)="submit()">
-    @if (accountCreated) {
-      <p class="callout-info" role="status">Votre compte a été créé, vous pouvez vous connecter.</p>
+    @if (infoMessage; as message) {
+      <p class="callout-info" role="status">{{ message }}</p>
     }
     @if (serverError(); as error) {
       <p class="callout-error" role="alert">{{ error }}</p>

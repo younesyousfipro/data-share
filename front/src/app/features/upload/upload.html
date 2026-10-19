@@ -28,7 +28,7 @@
     </div>
 
     @if (shareLink(); as link) {
-      <p class="success">Félicitations, ton fichier sera conservé chez nous pendant {{ keptFor() }} !</p>
+      <p class="success">Félicitations, votre fichier sera conservé chez nous pendant {{ keptFor() }} !</p>
       <p class="share-link"><a class="link" [href]="link">{{ link }}</a></p>
       <button class="button-primary copy-button" type="button" (click)="copyLink(link)">
         <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -83,14 +83,14 @@
           Téléverser
         </button>
         @if (sending()) {
-          <p class="sending" role="status">Envoi en cours, ne ferme pas cette page…</p>
+          <p class="sending" role="status">Envoi en cours, ne fermez pas cette page…</p>
         }
       </form>
     }
   </section>
 } @else {
   <section class="home" aria-labelledby="home-title">
-    <h1 id="home-title" class="home-title">Tu veux partager un fichier ?</h1>
+    <h1 id="home-title" class="home-title">Vous voulez partager un fichier ?</h1>
     <button class="home-button" type="button" aria-label="Choisir un fichier" (click)="fileInput.click()">
       <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
         <path d="M5.33331 10.6667L7.99997 8.00001L10.6666 10.6667M7.99997 8.00001V14M13.5933 12.26C14.2435 11.9055 14.7572 11.3446 15.0532 10.6658C15.3492 9.98692 15.4108 9.22883 15.2281 8.51114C15.0454 7.79344 14.629 7.15702 14.0444 6.70231C13.4599 6.2476 12.7405 6.0005 12 6.00001H11.16C10.9582 5.2195 10.5821 4.4949 10.0599 3.88067C9.5378 3.26644 8.8832 2.77858 8.14537 2.45375C7.40754 2.12892 6.60567 1.97558 5.80005 2.00526C4.99443 2.03495 4.20602 2.24688 3.49409 2.62512C2.78216 3.00336 2.16525 3.53808 1.68972 4.18906C1.2142 4.84005 0.892434 5.59037 0.748627 6.38361C0.60482 7.17684 0.64271 7.99236 0.859449 8.76885C1.07619 9.54534 1.46613 10.2626 1.99997 10.8667" />

@@ -1401,3 +1401,62 @@ pas une `date-time` valide (RFC 3339).
 **Conséquence assumée :** petit changement du contrat (`openapi.yaml`,
 `contrat-interface.md`), sans effet sur le front, qui ne lit pas ce champ ; un test
 vérifie le `Z`.
+
+---
+
+## 2026-10-19 — Textes de l'interface : vouvoiement partout
+
+**Décidé :** l'interface vouvoie l'utilisateur sur tous les écrans. Deux textes des
+maquettes sont réécrits : « Vous voulez partager un fichier ? » et « Félicitations,
+votre fichier sera conservé… ».
+**Écarté :** garder les maquettes telles quelles (tutoiement sur l'upload, vouvoiement
+partout ailleurs) ; tout passer au tutoiement.
+**Pourquoi :** les maquettes mélangent les deux, et nos messages d'erreur avaient suivi
+l'un ou l'autre selon l'écran. Le vouvoiement y est majoritaire (5 textes contre 2) et
+convient à la cible, des freelances et des petites entreprises.
+**Conséquence assumée :** écart volontaire aux maquettes sur deux phrases.
+
+---
+
+## 2026-10-19 — URL inconnue : redirection vers l'accueil
+
+**Décidé :** une route de repli `**` redirige toute URL inconnue vers `/` ; le guard
+envoie ensuite un visiteur sans jeton vers `/login`.
+**Écarté :** une page « introuvable » dédiée.
+**Pourquoi :** sans route de repli, Angular affichait une page vide (header et footer
+seuls). La redirection tient en une ligne et réutilise le guard ; le cas est rare, car
+un lien de partage mal recopié dans son identifiant arrive déjà sur « Ce lien de
+téléchargement n'est pas valide ».
+**Conséquence assumée :** l'utilisateur n'est pas prévenu que l'adresse saisie
+n'existait pas.
+
+---
+
+## 2026-10-19 — Session expirée : un message sur la page de connexion
+
+**Décidé :** sur un `401`, l'intercepteur redirige vers `/login?expired=true` ; la page
+affiche « Votre session a expiré, veuillez vous reconnecter. » dans un callout bleu,
+comme « compte créé » (`?registered=true`).
+**Écarté :** une notification affichée par l'intercepteur lui-même (composant de
+notification à créer pour un seul message) ; lire l'expiration du jeton côté front
+(écarté le 2026-10-09).
+**Pourquoi :** jusqu'ici, l'utilisateur était renvoyé à la connexion sans explication,
+parfois en plein envoi de fichier. Le paramètre d'URL reprend un mécanisme qui existe
+déjà. Le guard ne l'ajoute pas : un visiteur jamais connecté n'a rien à apprendre.
+**Conséquence assumée :** le fichier en cours d'envoi est perdu ; il faut le choisir à
+nouveau après la reconnexion.
+
+---
+
+## 2026-10-19 — Revue de l'interface : rôles ARIA conservés
+
+**Décidé :** les 8 remarques SonarQube sur les rôles ARIA restent acceptées : 7
+`role="status"` (chargement, envoi, copie, téléchargement, confirmations) et le
+`role="group"` des filtres de « Mes fichiers ». Le point laissé ouvert le 2026-10-17
+est clos.
+**Écarté :** `<output>` à la place de `role="status"` ; `<fieldset>` à la place de
+`role="group"`.
+**Pourquoi :** les rôles sont valides et bien lus (Lighthouse accessibilité : 100).
+`<output>` désigne le résultat d'un calcul de formulaire, et plusieurs de ces messages
+sont hors formulaire ; un `<fieldset>` demande une `<legend>` visible et des styles à
+neutraliser pour trois boutons.

@@ -319,7 +319,8 @@ logout() ──────► jeton retiré de localStorage + signal à null �
 ```
 
 `logout()` a deux appelants : le bouton « Déconnexion » du header (US05) et
-l'intercepteur sur un `401`. Tous deux redirigent ensuite vers `/login`. **Aucun appel
+l'intercepteur sur un `401`. Tous deux redirigent ensuite vers `/login` ; l'intercepteur
+ajoute `?expired=true`, pour que la page dise pourquoi (décision du 2026-10-19). **Aucun appel
 à l'API** : le JWT est sans état, le back n'a pas de session à fermer. Un jeton copié
 reste donc valable jusqu'à son `exp` (1 h au plus, limite tracée dans `SECURITY.md`).
 
@@ -341,7 +342,7 @@ service n'ajoute le jeton lui-même.
 |---|---|
 | `/api/auth/**`, `/api/download/**` (publiques) | rien : un jeton expiré envoyé là ferait répondre `401` par Spring, qui vérifie tout jeton reçu |
 | toute autre route `/api` | ajoute `Authorization: Bearer <jeton>` s'il y en a un |
-| réponse `401` d'une route protégée | `logout()`, puis redirection vers `/login` ; l'erreur continue jusqu'à la page |
+| réponse `401` d'une route protégée | `logout()`, puis redirection vers `/login?expired=true` (message « session expirée ») ; l'erreur continue jusqu'à la page |
 
 Le `401` de `/api/auth/login` (identifiants refusés) n'est pas intercepté : c'est la page
 de connexion qui l'affiche.
@@ -357,6 +358,7 @@ l'API décide de l'accès.**
 | Situation | Qui réagit |
 |---|---|
 | pas de jeton, ouverture de `/` | le guard, avant l'affichage |
+| URL inconnue | la route de repli `**` redirige vers `/`, puis le guard s'applique (décision du 2026-10-19) |
 | jeton expiré, ouverture de `/` | personne : le guard ne lit pas l'expiration (décision du 2026-10-09) ; l'intercepteur réagit au premier appel refusé (`401`) |
 
 ## Flux principaux

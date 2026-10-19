@@ -60,7 +60,7 @@ describe('authInterceptor', () => {
     httpMock.expectOne('/api/files').flush(null, { status: 401, statusText: 'Unauthorized' });
 
     expect(localStorage.getItem('token')).toBeNull();
-    expect(navigate).toHaveBeenCalledWith(['/login']);
+    expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { expired: true } });
     expect(status).toBe(401);
   });
 

@@ -214,7 +214,7 @@ describe('Download', () => {
       await submitForm();
 
       expect(download).not.toHaveBeenCalled();
-      expect(text('#password-error')).toBe('Le mot de passe contient 18 caractères au maximum.');
+      expect(text('#password-error')).toBe('Le mot de passe ne peut pas dépasser 18 caractères.');
     });
 
     it('should disable the button and tell the download is running until it ends', async () => {
