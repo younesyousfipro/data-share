@@ -31,6 +31,15 @@ class OpenApiDocsTest {
 				.andExpect(jsonPath("$.paths['/api/download/{id}'].get.security").doesNotExist());
 	}
 
+	// Separate route: "/v3/api-docs/**" does not cover it
+	@Test
+	void apiDocsYaml_isPublic() throws Exception {
+		// WHEN
+		mockMvc.perform(get("/v3/api-docs.yaml"))
+				// THEN
+				.andExpect(status().isOk());
+	}
+
 	@Test
 	void swaggerUi_isPublic() throws Exception {
 		// WHEN
