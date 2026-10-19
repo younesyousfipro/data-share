@@ -49,6 +49,8 @@ public class SpringSecurityConfig {
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers("/api/auth/**", "/api/download/**").permitAll()
+						// API description and Swagger UI (springdoc)
+						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.anyRequest().authenticated())
 				// Reads "Authorization: Bearer <token>"; a missing, forged or expired token gives a 401
 				// with an empty body and the standard WWW-Authenticate header

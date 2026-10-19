@@ -3,6 +3,7 @@ package io.github.younesyousfipro.datashare.controller;
 import io.github.younesyousfipro.datashare.dto.FileResponseDTO;
 import io.github.younesyousfipro.datashare.dto.UploadRequestDTO;
 import io.github.younesyousfipro.datashare.service.FileService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/files")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class FileController {
 
