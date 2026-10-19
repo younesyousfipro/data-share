@@ -49,7 +49,9 @@ echo "JWT_SECRET=$(openssl rand -base64 32)" >> .env
 ```
 
 **Fichiers déposés** : rangés dans `back/uploads/` (non versionné), chacun sous le nom de
-son UUID. Autre dossier possible avec `STORAGE_DIRECTORY` dans `.env`.
+son UUID. Autre dossier possible avec `STORAGE_DIRECTORY` dans `.env`. Les fichiers expirés
+en sont effacés toutes les heures (horaire modifiable avec `PURGE_CRON`) ; leur fiche reste
+dans l'historique.
 
 ### Lancement
 

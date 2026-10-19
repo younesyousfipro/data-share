@@ -45,7 +45,7 @@ session expirée et déconnecterait l'utilisateur.
 | Seule la dernière extension compte, casse ignorée | `facture.pdf.EXE` est refusé ; `archive.exe.zip` accepté |
 | Nom obligatoire, 255 caractères au plus | taille de la colonne : une requête forgée finirait sinon en `500` |
 | Sur le disque, le fichier porte son UUID, jamais son nom d'origine | un nom piégé (`../../config`) ne peut pas faire écrire hors du dossier de stockage (*path traversal*) |
-| Expiration de 1 à 7 jours ; fichier expiré refusé (`410`), effacé du disque chaque nuit | un lien ne reste pas valable indéfiniment |
+| Expiration de 1 à 7 jours ; fichier expiré refusé (`410`), effacé du disque par la purge (toutes les heures) | un lien ne reste pas valable indéfiniment |
 | Téléchargé en pièce jointe, toujours en `application/octet-stream`, avec `nosniff` | un fichier `.html` ou `.svg` déposé est enregistré par le navigateur, jamais affiché ni exécuté sous notre domaine |
 | Chaque règle est contrôlée par le front **et** par l'API | le front se contourne (`curl`) : seule l'API fait foi |
 

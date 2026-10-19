@@ -12,7 +12,7 @@ flowchart LR
     F["Front Angular<br/>:4200"]
     subgraph API["API Spring Boot :8080"]
       S["Controllers → Services → Repositories"]
-      P["Purge quotidienne<br/>(tâche planifiée)"]
+      P["Purge horaire<br/>(tâche planifiée)"]
     end
     D[("Dossier local<br/>fichiers déposés")]
   end
@@ -127,7 +127,7 @@ technique. C'est le back qui transforme chaque refus en réponse claire (`400`, 
 | `dto/` | objets d'entrée et de sortie, suffixés `DTO` (`RegisterRequestDTO`) ; l'énumération `FileStatus` | la forme exacte des données échangées avec le front. `FileStatus` est le type du champ `status`, jamais envoyé seul : il fait partie du contrat, d'où ce package, mais n'est pas un DTO, d'où l'absence de suffixe. Seul `FileContentDTO` (nom, taille, flux du fichier) ne sort jamais en JSON : il passe du service au controller, qui en fait la réponse binaire |
 | `mapper/` | `FileMapper`, écrit à la main | convertit une entité en DTO. Ajoute des champs **calculés**, absents des tables : le statut, déduit de `expires_at` comparée à l'heure actuelle ; « protégé » (oui / non), qui fait afficher le cadenas et le champ mot de passe, déduit de `password_hash` sans jamais envoyer ce hash au front |
 | `storage/` | `FileStorage`, `LocalFileStorage` | écrit, lit et efface un fichier sur le disque, sans rien décider : ce sont les services qui choisissent quoi effacer (`FileService` pour la suppression US06, `FilePurgeService` pour la purge) |
-| `configuration/` | `SpringSecurityConfig` | routes publiques ou protégées ; fabrique les outils de sécurité (BCrypt, signature et vérification du JWT) |
+| `configuration/` | `SpringSecurityConfig`, `OpenApiConfig` | routes publiques ou protégées ; fabrique les outils de sécurité (BCrypt, signature et vérification du JWT). `OpenApiConfig` nomme l'API et déclare le schéma JWT pour le Swagger UI |
 | `exception/` | `RestExceptionHandler`, exceptions métier (`EmailAlreadyUsedException`…) | transforme toute erreur en une réponse au même format (`ErrorDetailsDTO`) |
 
 Un controller ne parle qu'à un service. Un service parle aux repositories et à
@@ -160,7 +160,7 @@ sait **comment**, la configuration dit **où**.
 | Acteur | Sait | Ignore |
 |---|---|---|
 | `FileService`, `FilePurgeService` | quoi : « range ce contenu sous cet UUID », « efface ce fichier » | où et comment c'est rangé |
-| `FileStorage` (interface) | le contrat : `store(id, contenu)`, `delete(id)` | — |
+| `FileStorage` (interface) | le contrat : `store(id, contenu)`, `read(id)`, `delete(id)` | — |
 | `LocalFileStorage` | comment : un fichier par UUID dans un dossier, copié morceau par morceau | pourquoi on lui demande d'écrire ou d'effacer |
 | `application.properties` | où : `datashare.storage.directory` (`STORAGE_DIRECTORY`, défaut `back/uploads`) | — |
 
@@ -611,7 +611,7 @@ DownloadController ─► FileService.download ─► contrôles (404, 410, 403)
 Toujours `application/octet-stream`, quel que soit le fichier : avec l'en-tête `nosniff`,
 le navigateur l'enregistre sans jamais l'afficher ni l'exécuter.
 
-#### Côté front : une page, quatre états
+#### Côté front : une page, trois états
 
 La page `/download/:id` n'a pas de guard. Son état se déduit de deux signaux :
 `metadata` (réponse du `GET`) et `unavailableMessage` (son échec).
@@ -620,7 +620,7 @@ La page `/download/:id` n'a pas de guard. Son état se déduit de deux signaux :
 |---|---|---|
 | vide | vide | « Chargement… » |
 | rempli | — | nom, taille, avis d'expiration, champ mot de passe si protégé, bouton |
-| vide | rempli | carte réduite au message : expiré (`410`) ou lien invalide (`404`, `400`) |
+| vide | rempli | carte réduite au message : expiré (`410`), lien invalide (`404`, `400`), ou erreur générique (autre code) |
 
 Un `400`, `404` ou `410` reçu **au clic** vide `metadata` : la page rejoint le même état
 qu'au chargement. Un `403` laisse la page en place avec « Mot de passe incorrect. ».
@@ -731,11 +731,27 @@ fiche (`FileResponseDTO`), en comparant `expires_at` à l'heure courante. Il vau
 
 | Quand | Qui | Effet |
 |---|---|---|
-| à chaque téléchargement | `FileService` | refus si `expires_at` est dépassée |
+| à chaque ouverture du lien (métadonnées et téléchargement) | `FileService` | `410` si `expires_at` est dépassée |
 | à chaque fiche renvoyée (upload, historique) | `FileMapper` | statut `ACTIVE` · `EXPIRING_SOON` · `EXPIRED` |
-| chaque nuit | `FilePurgeService` (`@Scheduled`) | efface du disque les fichiers expirés, **garde la fiche** |
+| toutes les heures | `FilePurgeService` (`@Scheduled`) | efface du disque les fichiers expirés, **garde la fiche** |
 
 La purge efface « si le fichier existe encore » : la relancer ne casse rien.
+
+```
+toutes les heures (cron datashare.purge.cron, variable PURGE_CRON)
+  └─► FilePurgeService.purgeExpiredFiles
+        ├─ SharedFileRepository.findByExpiresAtBefore(maintenant) ── WHERE expires_at < ?
+        ├─ pour chaque fiche : FileStorage.delete(UUID)
+        │     └─ échec ? log.warn avec l'UUID, on passe au suivant (retenté au passage suivant)
+        └─ log.info : nombre de fiches traitées
+```
+
+| Choix | Raison |
+|---|---|
+| toutes les heures, pas une fois par nuit | Spring ne rattrape pas un passage manqué (veille, appli arrêtée) : sur un poste éteint la nuit, une purge à 3 h ne passerait jamais. Un serveur qui ne s'arrête pas peut revenir à une fois par jour (`PURGE_CRON=0 0 3 * * *`) |
+| chaque passage reprend **toutes** les fiches expirées | aucun fichier oublié après un passage manqué. Revers : les fiches déjà purgées reviennent à chaque fois (effacement sans effet) ; perspective « Rétention des métadonnées » |
+| un échec n'arrête pas la boucle | un fichier bloqué (droits) ne doit pas empêcher d'effacer les autres ; sa fiche reste, il est retenté |
+| classe à part, pas dans `FileService` | `FileService` répond à un utilisateur (compte, JWT) ; la purge est une tâche d'exploitation, sans requête ni compte |
 
 ## Cohérence entre disque et base
 
@@ -749,7 +765,7 @@ disque qu'une fiche qui pointe vers un fichier absent**.
 |---|---|---|---|
 | Envoi (US01) | `FileService`, en compensation | disque, puis base | le fichier écrit est effacé |
 | Suppression (US06) | `FileService` | base, puis disque | fichier orphelin, journalisé |
-| Purge (US10 partielle) | `FilePurgeService` | disque seul, la fiche est gardée | réessayé la nuit suivante |
+| Purge (US10 partielle) | `FilePurgeService` | disque seul, la fiche est gardée | retenté au passage suivant |
 
 **Pourquoi la fiche avant le fichier, à la suppression.** Dans l'ordre inverse, un échec
 en base laisserait une fiche sans fichier : visible dans l'historique, lien partagé
@@ -781,7 +797,7 @@ Spring interroge des **indicateurs**, détectés d'après ce que contient l'appl
 | Indicateur | Présent parce que | Vérifie |
 |---|---|---|
 | `db` | une `DataSource` existe | une requête de test sur PostgreSQL |
-| `diskSpace` | toujours | l'espace libre, là où sont stockés les fichiers déposés |
+| `diskSpace` | toujours | l'espace libre du disque où l'API est lancée (`back/`) : celui des fichiers déposés, tant que `STORAGE_DIRECTORY` n'en désigne pas un autre |
 | `ping` | toujours | rien : répond toujours `UP` |
 
 Un seul indicateur `DOWN` donne `{"status":"DOWN"}` et un code `503` : le processus
@@ -811,6 +827,7 @@ silencieux. Le journal est la seule façon de le voir.
 | **`application.properties`** | console en texte lisible ; fichier `logs/datashare.log` en JSON (format ECS, supporté nativement par Spring Boot) |
 | **`RequestLoggingFilter`** (package `logging`) | une ligne par requête HTTP : méthode, chemin, statut, durée |
 | **`FileService.logFileEvent`** | une ligne par upload, download, delete : identifiant, taille, propriétaire |
+| **`FilePurgeService`** | une ligne par passage de la purge (nombre de fiches expirées) ; un avertissement par fichier qu'elle n'a pas pu effacer |
 
 Ce qu'un log apporte, là où un `System.out.println` n'apporterait rien :
 

@@ -33,6 +33,7 @@ priorité, et en échec comme en succès.
 | Envoi : 1 Go max, extensions refusées, durée de 1 à 7 jours, mot de passe de 6 à 18 caractères | US01 | fichiers dangereux ou hors limites stockés | unitaire + intégration + E2E |
 | Téléchargement : `410` si expiré, `403` si mot de passe faux | US02 | fichier accessible après expiration ou sans son mot de passe | unitaire + intégration + E2E |
 | Suppression physique : fiche et fichier effacés | US06 | fichier conservé alors que l'utilisateur le croit supprimé | unitaire + intégration + E2E |
+| Purge : seuls les fichiers expirés effacés du disque, fiches gardées | US10 partielle | fichiers valides effacés, ou disque qui se remplit | unitaire + intégration |
 
 ## Scénarios E2E
 
@@ -166,6 +167,16 @@ et ne touchent pas aux fichiers de dev.
 |---|---|---|
 | `FileServiceTest` | unitaire | fiche effacée **puis** fichier sur le disque · fichier expiré supprimable · fichier d'un autre compte : `404`, rien d'effacé · fichier inconnu : `404` · échec du disque : aucune erreur remontée, fiche effacée (orphelin journalisé) |
 | `FileControllerTest` | intégration | `204` : fiche absente de la base **et** fichier absent du disque · fichier d'un autre compte : `404`, fiche et fichier intacts · fichier inconnu : `404` · `400` identifiant qui n'est pas un UUID · `401` sans jeton, rien d'effacé |
+
+### US10 partielle — Purge des fichiers expirés (back)
+
+| Test | Niveau | Cas couverts |
+|---|---|---|
+| `FilePurgeServiceTest` | unitaire | fichier de chaque fiche expirée effacé du disque · **aucune fiche supprimée ni modifiée** (repository seulement lu) · échec du disque sur un fichier : les suivants sont effacés quand même |
+| `FilePurgeIntegrationTest` | intégration, vraie base et vrai disque | purge planifiée toutes les heures (`0 0 * * * *`), seule tâche planifiée · **seul le fichier expiré disparaît du disque**, l'actif reste, les deux fiches restent en base |
+
+Le test d'intégration appelle la purge directement, sans attendre l'heure : la planification
+et l'effacement sont vérifiés séparément.
 
 ### Journalisation (back)
 

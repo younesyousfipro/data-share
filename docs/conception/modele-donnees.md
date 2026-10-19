@@ -88,7 +88,7 @@ possède déjà ce fichier.
 | Téléchargement (US02) | `file_id` du lien, `expires_at`, `password_hash` | — |
 | Historique (US05) | les fichiers dont `account_id` = moi | — |
 | Suppression (US06) | `account_id` (est-ce le mien ?) | supprime la ligne + le fichier disque |
-| Purge quotidienne (US10 partielle) | `expires_at` dépassée | supprime le fichier disque, **garde la ligne** |
+| Purge horaire (US10 partielle) | `expires_at` dépassée | supprime le fichier disque, **garde la ligne** |
 
 ## Ce qui n'est pas stocké
 

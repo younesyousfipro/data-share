@@ -25,7 +25,7 @@ réécrire si le prototype est retenu). Le détail de chaque arbitrage est dans
 ## Back — Spring Boot
 
 - **Tout est inclus** : sécurité (Spring Security), accès aux données (Spring Data
-  JPA), tâches planifiées (purge quotidienne), intégration Flyway et Docker Compose.
+  JPA), tâches planifiées (purge des fichiers expirés), intégration Flyway et Docker Compose.
   Aucune bibliothèque tierce à assembler.
 - **Structure imposée et lisible** : Controller → Service → Repository, DTO en
   entrée et en sortie.

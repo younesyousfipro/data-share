@@ -120,7 +120,8 @@ stabiliser le MCD avant d'écrire `V1`.
 
 ## 2026-10-02 — US10 partielle : purge quotidienne du fichier physique
 
-**Décidé :** une tâche planifiée quotidienne efface le **fichier physique** des
+**Décidé :** une tâche planifiée quotidienne *(révisé : toutes les heures, voir « Purge
+codée » du 2026-10-19)* efface le **fichier physique** des
 fichiers expirés ; les **métadonnées sont conservées**. Le reste d'US10 (durée 1-7 jours, défaut 7, validation serveur) est
 déjà couvert par US01.
 **Écarté :** US10 à la lettre (suppression des métadonnées : l'onglet « Expiré » de la
@@ -1489,3 +1490,22 @@ README s'en sert pour vérifier le démarrage. Une sonde de santé doit répondr
 authentification, comme le ferait un orchestrateur qui teste l'application. Seule
 cette route est ouverte : une route Actuator exposée plus tard restera protégée.
 **Conséquence assumée :** n'importe qui peut savoir si l'API est démarrée.
+
+---
+
+## 2026-10-19 — Purge codée, toutes les heures
+
+**Constat :** la purge décidée le 2026-10-02 n'avait jamais été codée, alors que la
+documentation la décrivait et que l'historique affiche « il n'est plus stocké chez
+nous ». Relevé à la revue de `architecture.md` contre le code.
+**Décidé :** `FilePurgeService`, `@Scheduled` **toutes les heures** (`PURGE_CRON`) :
+efface du disque le fichier de chaque fiche expirée, garde la fiche. Un échec sur un
+fichier est journalisé et n'arrête pas les suivants.
+**Écarté :** une fois par nuit ; abandonner la purge (six documents à réécrire, et le
+message de l'écran resterait faux).
+**Pourquoi :** Spring ne rattrape pas un passage manqué. Un poste de développement est
+éteint la nuit : une purge à 3 h ne passerait jamais. Toutes les heures respecte
+« chaque jour » d'US10 (au moins une fois par jour), pour un coût négligeable.
+**Conséquence assumée :** les fiches déjà purgées sont relues à chaque passage
+(effacement sans effet). En production, sur un serveur qui ne s'arrête pas, une fois
+par jour suffit (`PURGE_CRON=0 0 3 * * *`).
