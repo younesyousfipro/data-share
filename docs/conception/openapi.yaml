@@ -109,7 +109,7 @@ paths:
       description: |
         The file is streamed to disk under its UUID; the original name is kept
         in the database. The share link is `/download/{id}` on the front.
-      operationId: uploadFile
+      operationId: upload
       security:
         - bearerAuth: []
       requestBody:
@@ -144,7 +144,7 @@ paths:
         Deletes the database row, then the file on disk. Irreversible.
         A file owned by another account gets the same 404 as an unknown file,
         so its existence is not disclosed.
-      operationId: deleteFile
+      operationId: delete
       security:
         - bearerAuth: []
       parameters:
@@ -164,7 +164,7 @@ paths:
       tags: [download]
       summary: Get file metadata before download (US02)
       description: Public. Shows what the recipient is about to download.
-      operationId: getFileMetadata
+      operationId: getMetadata
       parameters:
         - $ref: '#/components/parameters/FileId'
       responses:
@@ -187,7 +187,7 @@ paths:
       description: |
         Public. The password, when the file is protected, travels in the body,
         never in the URL. The body may be omitted for an unprotected file.
-      operationId: downloadFile
+      operationId: download
       parameters:
         - $ref: '#/components/parameters/FileId'
       requestBody:
@@ -304,6 +304,7 @@ components:
           example: marie@mail.fr
         password:
           type: string
+          minLength: 1
           example: s3cretPass
 
     LoginResponse:
