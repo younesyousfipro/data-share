@@ -162,7 +162,7 @@ describe('MyFiles', () => {
     expect(row.querySelector('.lock')).toBeNull();
     expect(row.querySelector('button.delete')).not.toBeNull();
     expect(row.querySelector('.expired-note')?.textContent).toBe(
-      "Ce fichier a expiré, il n'est plus stocké chez nous",
+      "Ce fichier a expiré, il n'est plus stocké chez nous.",
     );
   });
 

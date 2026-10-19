@@ -131,7 +131,7 @@ function uploadErrorMessage(status: number): string {
     case 413:
       return 'La taille des fichiers est limitée à 1 Go.';
     case 400:
-      return 'Le serveur a refusé ce fichier : vérifiez son nom et son type.';
+      return 'Ce fichier a été refusé : vérifiez son nom et son type.';
     default:
       return 'Une erreur est survenue, veuillez réessayer.';
   }

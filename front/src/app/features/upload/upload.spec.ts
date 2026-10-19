@@ -306,7 +306,7 @@ describe('Upload', () => {
     it('should explain a file refused by the server', async () => {
       await sendAndFailWith(400);
 
-      expect(alertText()).toBe('Le serveur a refusé ce fichier : vérifiez son nom et son type.');
+      expect(alertText()).toBe('Ce fichier a été refusé : vérifiez son nom et son type.');
     });
 
     it('should show a generic message on any other error and allow a new try', async () => {
