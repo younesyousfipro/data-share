@@ -1,6 +1,16 @@
 # Tests
 
-Stratégie de test de DataShare, tenue à jour à chaque user story.
+## L'essentiel
+
+| | Résultat |
+|---|---|
+| **Couverture** (seuil : 70 %, bloquant) | back **97 %**, front **99,7 %** des instructions |
+| **Scénarios E2E** (Cypress, sur la vraie application) | **3 sur 3** passent : partager, télécharger un fichier protégé, supprimer |
+| **Fonctionnalités critiques** | 8 identifiées avant le développement, chacune testée en succès et en échec |
+| **Charge** (k6) | 95 % des uploads en 31 ms sous 10 utilisateurs ([`PERF.md`](PERF.md)) |
+
+Lancer les tests : [Exécution](#exécution). Détail des cas couverts, user story par user
+story : [Tests par user story](#tests-par-user-story), à déplier.
 
 ## Niveaux de test
 
@@ -76,12 +86,12 @@ Seuil de **70 %** sur les quatre métriques (instructions, lignes, branches, mé
 mesuré **séparément** pour le back (JaCoCo) et le front (Vitest). Sous le seuil, la
 commande échoue (décision du 2026-10-07).
 
-**Résultats** (mesure du 2026-10-16) :
+**Résultats** (rapports du 2026-10-19) :
 
 | | Instructions | Branches | Lignes | Méthodes |
 |---|---|---|---|---|
-| Back (JaCoCo) | 96 % | 94 % | 96 % | 98 % |
-| Front (Vitest, 127 tests) | 99,7 % | 98 % | 99,6 % | 100 % |
+| Back (JaCoCo) | 97 % | 95 % | 97 % | 99 % |
+| Front (Vitest) | 99,7 % | 98 % | 99,6 % | 100 % |
 
 SonarQube, qui relit ces deux rapports, affiche des valeurs cohérentes : **96,3 %** (back) et
 **98,9 %** (front), en un seul chiffre qui combine lignes et branches. Il applique les
@@ -111,7 +121,10 @@ compterait sinon à 0 % ([`MAINTENANCE.md`](MAINTENANCE.md#qualité-du-code-sona
 
 ## Tests par user story
 
-### US03 — Création de compte
+Un bloc par user story : chaque test, son niveau et les cas qu'il couvre.
+
+<details>
+<summary>US03 — Création de compte</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
@@ -120,7 +133,10 @@ compterait sinon à 0 % ([`MAINTENANCE.md`](MAINTENANCE.md#qualité-du-code-sona
 | `auth.service.spec.ts` (front) | unitaire | `POST /api/auth/register` avec l'email et le mot de passe |
 | `register.spec.ts` (front) | unitaire | aucune erreur avant de quitter un champ · formulaire vide : trois erreurs · email mal formé, erreur reliée au champ (`aria-invalid`, `aria-describedby`) · espaces retirés de l'email · mot de passe hors 8 à 18 caractères · confirmation différente · aucun appel si le formulaire est invalide · envoi de l'email et du mot de passe seuls, puis redirection vers `/login?registered=true` · `409` : « email déjà utilisé » · autre erreur : message générique · double clic : une seule requête |
 
-### US04 — Connexion
+</details>
+
+<details>
+<summary>US04 — Connexion</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
@@ -131,7 +147,10 @@ compterait sinon à 0 % ([`MAINTENANCE.md`](MAINTENANCE.md#qualité-du-code-sona
 | `login.spec.ts` (front) | unitaire | message « compte créé » seulement avec `?registered=true` · message « session expirée » avec `?expired=true` · formulaire vide : deux erreurs · email mal formé, erreur reliée au champ · espaces retirés de l'email · mot de passe court accepté (longueur contrôlée à l'inscription) · aucun appel si le formulaire est invalide · envoi puis redirection vers `/` · `401` : « email ou mot de passe incorrect » · autre erreur : message générique · double clic : une seule requête |
 | `header.spec.ts` (front) | unitaire | « Se connecter » vers `/login` si déconnecté · bascule sur « Mon espace » dès la connexion, sans recréer le composant |
 
-### US01 — Upload (back)
+</details>
+
+<details>
+<summary>US01 — Upload (back)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
@@ -145,7 +164,10 @@ Les tests reçoivent une clé JWT factice et un dossier de stockage dans
 `target/test-uploads` par la configuration Maven (Surefire) : ils tournent sans `.env`
 et ne touchent pas aux fichiers de dev.
 
-### US02 — Téléchargement (back)
+</details>
+
+<details>
+<summary>US02 — Téléchargement (back)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
@@ -154,21 +176,30 @@ et ne touchent pas aux fichiers de dev.
 | `FileServiceTest` | unitaire | inconnu → `404`, expiré → `410` (même avec un mot de passe faux) · mot de passe absent, vide, faux ou de casse différente → `403` · bon mot de passe, ou fichier non protégé sans mot de passe → contenu · **à chaque refus, le fichier n'est jamais ouvert** |
 | `DownloadControllerTest` | intégration, **sans JWT** | métadonnées sans id, date d'envoi, propriétaire ni hash · `200` avec ou sans corps, fichier en pièce jointe, `application/octet-stream`, `Content-Length`, `nosniff` · nom accentué encodé en UTF-8 · `403`, `404`, `410` au format `ErrorDetailsDTO` · `400` : identifiant qui n'est pas un UUID, mot de passe de plus de 18 caractères (sans renvoyer la valeur) · `415` pour un corps en texte brut, avec le message de Spring (et non un message générique) |
 
-### US05 — Historique (back)
+</details>
+
+<details>
+<summary>US05 — Historique (back)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
 | `FileServiceTest` | unitaire | fiches dans l'ordre du repository, expirées comprises, statut et `passwordProtected` calculés · aucun fichier → liste vide |
 | `FileControllerTest` | intégration | seulement les fichiers du compte du jeton (pas ceux d'un autre compte) · **triés par la base**, le plus récent d'abord · fichier expiré listé en `EXPIRED` · ni hash ni `accountId` · `401` sans jeton |
 
-### US06 — Suppression (back)
+</details>
+
+<details>
+<summary>US06 — Suppression (back)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
 | `FileServiceTest` | unitaire | fiche effacée **puis** fichier sur le disque · fichier expiré supprimable · fichier d'un autre compte : `404`, rien d'effacé · fichier inconnu : `404` · échec du disque : aucune erreur remontée, fiche effacée (orphelin journalisé) |
 | `FileControllerTest` | intégration | `204` : fiche absente de la base **et** fichier absent du disque · fichier d'un autre compte : `404`, fiche et fichier intacts · fichier inconnu : `404` · `400` identifiant qui n'est pas un UUID · `401` sans jeton, rien d'effacé |
 
-### US10 partielle — Purge des fichiers expirés (back)
+</details>
+
+<details>
+<summary>US10 partielle — Purge des fichiers expirés (back)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
@@ -178,7 +209,10 @@ et ne touchent pas aux fichiers de dev.
 Le test d'intégration appelle la purge directement, sans attendre l'heure : la planification
 et l'effacement sont vérifiés séparément.
 
-### Journalisation (back)
+</details>
+
+<details>
+<summary>Journalisation (back)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
@@ -188,14 +222,20 @@ Les événements fichiers de `FileService` (upload, download, delete) sont exéc
 ses tests ; leur contenu réel est vérifié sur le log de l'application
 ([`PERF.md`](PERF.md#logs-structurés-et-suivi-des-métriques)).
 
-### Description de l'API et sonde de santé (back)
+</details>
+
+<details>
+<summary>Description de l'API et sonde de santé (back)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
 | `OpenApiDocsTest` | intégration | description de l'API (JSON et YAML) et Swagger UI accessibles sans jeton · routes `/api/files` marquées protégées, `/api/download` non |
 | `HealthCheckTest` | intégration | `/actuator/health` sans jeton : `UP`, sans détail sur la base ni le disque |
 
-### US01 — Upload (front)
+</details>
+
+<details>
+<summary>US01 — Upload (front)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
@@ -207,7 +247,10 @@ ses tests ; leur contenu réel est vérifié sur le log de l'application
 | `file-size.pipe.spec.ts` | unitaire | octets, puis Ko, Mo, Go par paliers de 1024, une décimale à la française |
 | `upload.spec.ts` | unitaire | accueil, sélecteur ouvert par « Choisir » et « Changer » · nom et taille du fichier · annulation du sélecteur : fichier conservé · 1 Go pile accepté, 1 Go + 1 octet refusé (bouton désactivé) · dernière extension interdite refusée quelle que soit la casse, `.exe.zip` et fichier sans extension acceptés · 7 jours par défaut · envoi du mot de passe et de la durée choisis · mot de passe de 5 ou 19 caractères refusé · fichier refusé jamais envoyé · double clic : une seule requête, message d'envoi · durée de conservation annoncée · lien `/download/<id>` affiché et copié, message si la copie est refusée · « Envoyer un autre fichier » : formulaire vierge · `413`, `400`, autre erreur : message adapté, nouvel essai possible |
 
-### US02 — Téléchargement (front)
+</details>
+
+<details>
+<summary>US02 — Téléchargement (front)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
@@ -215,7 +258,10 @@ ses tests ; leur contenu réel est vérifié sur le log de l'application
 | `save-file.spec.ts` | unitaire | lien cliqué avec le nom du fichier · URL `blob:` libérée après le clic, pas avant |
 | `download.spec.ts` | unitaire, vrai routeur, horloge figée | identifiant lu dans l'URL · chargement annoncé · nom et taille · avis d'expiration : bleu au-delà de 24 h, orange en dessous, « aujourd'hui » / « demain » / « dans 3 jours » comptés en jours du calendrier · `410` : carte réduite au message · `404` et `400` : lien invalide · autre erreur : message générique · fichier non protégé : pas de champ, enregistré sous son nom · mot de passe envoyé · champ vide ou de 19 caractères : erreur sous le champ, bouton actif, aucun appel · bouton désactivé pendant le téléchargement · `403` : mot de passe incorrect, fichier toujours affiché · `410` au clic : carte réduite au message |
 
-### US05 — Historique (front)
+</details>
+
+<details>
+<summary>US05 — Historique (front)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
@@ -224,9 +270,14 @@ ses tests ; leur contenu réel est vérifié sur le log de l'application
 | `my-files.spec.ts` | unitaire, vrai routeur, horloge figée | liste demandée au chargement · chargement annoncé · nom, taille, date d'envoi, échéance · ordre de l'API conservé · couleur d'après le `status` de l'API : aucune, orange, rouge · « Accéder » vers `/download/<id>`, nommé d'après le fichier · fichier expiré : ni « Accéder » ni cadenas, message · cadenas seulement si protégé · onglet « Actifs » par défaut (`EXPIRING_SOON` compris), « Tous », « Expiré » · onglet vide ou compte sans fichier : message · erreur : message générique · « Ajouter des fichiers » vers `/` |
 | `header.spec.ts` | unitaire | « Déconnexion » : `logout` appelé, redirection vers `/login` · absent si déconnecté |
 
-### US06 — Suppression (front)
+</details>
+
+<details>
+<summary>US06 — Suppression (front)</summary>
 
 | Test | Niveau | Cas couverts |
 |---|---|---|
 | `file.service.spec.ts` | unitaire | `DELETE /api/files/<id>`, `204` sans corps |
 | `my-files.spec.ts` | unitaire, vrai routeur | « Supprimer » nommé d'après le fichier · présent aussi sur un fichier expiré · confirmation refusée : aucun appel, ligne gardée · confirmée : ligne retirée, suppression annoncée (`role="status"`) · erreur : ligne gardée, message d'erreur |
+
+</details>

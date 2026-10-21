@@ -3,6 +3,25 @@
 Prototype d'une plateforme de transfert sécurisé de fichiers : un utilisateur inscrit
 dépose un fichier et obtient un lien de téléchargement à partager, valable 7 jours au plus.
 
+## Démarrage rapide
+
+Prérequis : Java 25, Docker Desktop lancé, Node.js 24 ([détail](#prérequis)).
+
+```bash
+# terminal 1 : l'API, qui lance aussi PostgreSQL
+cd back
+cp .env.example .env        # puis changer DB_PASSWORD et JWT_SECRET (voir Back)
+./mvnw spring-boot:run      # API sur http://localhost:8080
+
+# terminal 2 : l'application
+cd front
+npm ci
+npm start                   # http://localhost:4200
+```
+
+Créer un compte sur http://localhost:4200/register, se connecter, déposer un fichier :
+le lien de partage s'affiche. Le détail de chaque étape suit.
+
 | Dossier | Contenu |
 |---|---|
 | [`back/`](back/) | API REST Spring Boot, base PostgreSQL |
@@ -163,6 +182,9 @@ Le plus simple : le **Swagger UI**, http://localhost:8080/swagger-ui.html, back 
 Chaque route s'y essaie depuis le navigateur (*Try it out*) ; pour les routes
 protégées, coller le jeton de `/api/auth/login` dans *Authorize*.
 
+<details>
+<summary>En ligne de commande (curl) : chaque route et ses codes de réponse</summary>
+
 En ligne de commande, l'API répond directement sur le port 8080 :
 
 ```bash
@@ -258,6 +280,8 @@ curl -i -X DELETE http://localhost:8080/api/files/$ID -H "Authorization: Bearer 
 
 Les erreurs ont toutes le même format JSON (`timestamp`, `message`, `details`), sauf le
 `401` des routes protégées, à corps vide.
+
+</details>
 
 Toutes les routes sont décrites dans
 [`docs/conception/openapi.yaml`](docs/conception/openapi.yaml). Avec **Postman** :

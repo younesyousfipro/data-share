@@ -1,5 +1,16 @@
 # Sécurité
 
+## L'essentiel
+
+| | |
+|---|---|
+| **Accès** | JWT signé, valable 1 h ; l'identité est lue dans le jeton, jamais dans la requête ; le fichier d'un autre compte répond `404` |
+| **Mots de passe** | hachés avec BCrypt, jamais stockés ni journalisés en clair |
+| **Fichiers** | lien de partage impossible à deviner (UUID) ; stockés sous leur UUID, jamais sous le nom reçu ; extensions dangereuses refusées ; règles contrôlées par le front **et** l'API |
+| **Scan des dépendances** (Trivy, `npm audit`) | 10 failles dans le back, dont 3 critiques → **0** après correction |
+| **Analyse du code** (SonarQube) | sécurité notée D → **A** ; la seule remarque (CSRF désactivé) est justifiée et acceptée |
+| **Limites principales** | liste noire d'extensions contournable, JWT dans `localStorage`, HTTP en développement : voir [Limites connues](#limites-connues) |
+
 Politique de sécurité du prototype (US01 à US06), mise en œuvre au fil des user
 stories, puis résultats des scans. Détail technique :
 [`architecture.md`](docs/conception/architecture.md) ; raison de chaque choix :
@@ -49,6 +60,9 @@ session expirée et déconnecterait l'utilisateur.
 | Téléchargé en pièce jointe, toujours en `application/octet-stream`, avec `nosniff` | un fichier `.html` ou `.svg` déposé est enregistré par le navigateur, jamais affiché ni exécuté sous notre domaine |
 | Chaque règle est contrôlée par le front **et** par l'API | le front se contourne (`curl`) : seule l'API fait foi |
 
+<details>
+<summary>D'où vient la liste des extensions refusées</summary>
+
 La spécification laisse la liste « à définir selon la politique de sécurité ». Elle
 reprend le cœur de celle de Gmail, référence pour les pièces jointes, plus `sh` pour
 Linux et macOS :
@@ -58,6 +72,8 @@ Linux et macOS :
 | WeTransfer | aucun | — |
 | **DataShare** | 9 extensions : exécutables et scripts | non |
 | Gmail | plus de 50 extensions | oui |
+
+</details>
 
 ### Ce que l'API ne révèle pas
 
@@ -161,7 +177,8 @@ mécanisme prévu par Spring Boot, à retirer au passage à 4.1.2.
 
 ## Analyse du code (SonarQube)
 
-Dernière analyse : **17 octobre 2026**. La relancer, et le détail qualité (dette,
+Dernière analyse : **17 octobre 2026**, avant l'ajout de la purge des fichiers expirés
+(PR #26), qui n'a pas été réanalysée. La relancer, et le détail qualité (dette,
 duplication) : [`MAINTENANCE.md`](MAINTENANCE.md#qualité-du-code-sonarqube).
 
 Le scan des dépendances regarde les bibliothèques. SonarQube lit **notre code**, sans

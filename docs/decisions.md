@@ -5,6 +5,25 @@ Reconstituer ces justifications en fin de projet fait perdre les vraies raisons.
 
 Format : date, décision, options écartées, raison, conséquence acceptée.
 
+## Les décisions qui structurent le projet
+
+Le journal se parcourt par recherche (`Ctrl+F`). Pour une première lecture, ces décisions
+suffisent à comprendre le projet :
+
+| Décision | Date | En bref |
+|---|---|---|
+| [Stockage des fichiers : système de fichiers local](#2026-09-30--stockage-des-fichiers--système-de-fichiers-local) | 2026-09-30 | stockage local derrière une interface, remplaçable par un stockage objet |
+| [Périmètre : MVP strict, US07 à US10 écartées](#2026-10-02--périmètre--mvp-strict-us07-à-us10-écartées) | 2026-10-02 | livrer complet plutôt que large |
+| [Back rangé par couche, comme au P2](#2026-10-02--back-rangé-par-couche-comme-au-p2) | 2026-10-02 | controller → service → repository |
+| [Cohérence disque / base : ordre des écritures](#2026-10-02--cohérence-disque--base--ordre-des-écritures) | 2026-10-02 | pas de transaction commune : ordre fixé et compensation |
+| [Dev : proxy Angular plutôt que configuration CORS](#2026-10-02--dev--proxy-angular-plutôt-que-configuration-cors) | 2026-10-02 | une seule origine, comme derrière un reverse proxy |
+| [Lien de partage = identifiant du fichier](#2026-10-03--lien-de-partage--identifiant-du-fichier) | 2026-10-03 | UUID non devinable, sans révocation |
+| [Couverture : 70 %, bloquant, mesuré de chaque côté](#2026-10-07--couverture--70--bloquant-mesuré-de-chaque-côté) | 2026-10-07 | le seuil du projet, contrôlé à chaque build |
+| [Contenu du JWT : identifiant du compte, 1 heure](#2026-10-09--contenu-du-jwt--identifiant-du-compte-1-heure) | 2026-10-09 | ce que porte le jeton, et pourquoi pas l'email |
+| [Tests E2E : sur la vraie application, sans API simulée](#2026-10-16--tests-e2e--sur-la-vraie-application-sans-api-simulée) | 2026-10-16 | prouver le branchement front, API, base, disque |
+| [Failles du back : Tomcat et Jackson forcés en attendant Spring Boot 4.1.2](#2026-10-16--failles-du-back--tomcat-et-jackson-forcés-en-attendant-spring-boot-412) | 2026-10-16 | corriger sans attendre l'éditeur |
+| [Purge codée, toutes les heures](#2026-10-19--purge-codée-toutes-les-heures) | 2026-10-19 | US10 partielle : fichier effacé, fiche gardée |
+
 ---
 
 ## AAAA-MM-JJ — <décision>
@@ -1509,3 +1528,68 @@ message de l'écran resterait faux).
 **Conséquence assumée :** les fiches déjà purgées sont relues à chaque passage
 (effacement sans effet). En production, sur un serveur qui ne s'arrête pas, une fois
 par jour suffit (`PURGE_CRON=0 0 3 * * *`).
+
+---
+
+## 2026-10-19 — SonarQube : pas de nouvelle analyse après la purge
+
+**Décidé :** la purge des fichiers expirés (PR #26) est livrée sans nouvelle analyse
+SonarQube. La dernière analyse (17 octobre) est datée et signalée dans `SECURITY.md` et
+`MAINTENANCE.md` ; la réanalyse est notée « En suspens ».
+**Écarté :** relancer l'analyse avant la soutenance.
+**Pourquoi :** [à compléter]. Le code ajouté est court et couvert par un test unitaire
+(`FilePurgeServiceTest`) et un test d'intégration (`FilePurgeIntegrationTest`).
+**Conséquence assumée :** écart avec la règle « analyse SonarQube avant chaque PR »
+(`MAINTENANCE.md`), tracé plutôt que masqué.
+
+---
+
+## 2026-10-20 — Version livrée marquée par un tag : `v0.1.0`
+
+**Décidé :** un tag git annoté `v0.1.0` sur `main`, posé une fois la passe sur la
+documentation mergée, c'est-à-dire sur la version livrée. Numérotation sémantique
+(`MAJEURE.MINEURE.CORRECTIF`) ; procédure dans `MAINTENANCE.md`.
+**Écarté :** `v1.0.0` (annoncerait une version stable, prête pour la production) ; des
+tags posés après coup sur chaque user story (les merges de PR donnent déjà cet
+historique, et un tag désigne une version livrable, pas une étape) ; un tag léger (ni
+auteur, ni date, ni message).
+**Pourquoi :** un repère fixe pour la suite : comparer (`git diff v0.1.0..main`), repartir
+de la version qui marchait sur une branche, tester d'autres directions sans perdre la
+version saine. `0.x` dit que c'est un prototype.
+**Conséquence assumée :** aucune version intermédiaire marquée pendant le développement ;
+à refaire autrement (« ce que je ferais différemment »).
+
+---
+
+## 2026-10-21 — Documentation : l'essentiel en tête, le détail replié
+
+**Décidé :** chaque fichier de documentation s'ouvre sur un bloc « L'essentiel » (un
+tableau) ; le corps reste visible ; le détail utile seulement à un développeur ou à une
+IA (procédures, sorties d'outils, cas de test un par un) est replié dans des
+`<details>`. Ce qui est demandé par la consigne (captures, interprétation, fréquence,
+risques) n'est jamais replié. Les flux de `architecture.md` passent dans `flux.md`.
+**Écarté :** une version courte dans un dossier à part (deux versions finissent par
+diverger, alors que la consigne exige la cohérence) ; compacter (perdrait les raisons des
+choix, ce que le jury interroge) ; tout replier sous l'essentiel (on ne pourrait plus
+parcourir les titres).
+**Pourquoi :** la documentation était complète mais longue pour un lecteur humain. Une
+seule source sert les deux publics : le lecteur pressé s'arrête au premier écran, celui
+qui reprend le projet descend jusqu'au détail.
+**Conséquence assumée :** une recherche `Ctrl+F` sur GitHub peut ne pas trouver un texte
+replié tant qu'il n'est pas déplié.
+
+---
+
+## 2026-10-21 — Support de soutenance : deck hors du dépôt
+
+**Décidé :** le deck est fait avec l'outil Slides de claude.ai, aux couleurs de
+DataShare (DM Sans, dégradé orangé), et exporté en PDF ou PPTX pour le dépôt sur la
+plateforme. Il reste **hors du dépôt**. Destiné à Lisa, chef de produit : langage
+métier sur les slides, détail technique dans les notes orales et dans des annexes
+montrées seulement sur question.
+**Écarté :** Canva directement (pas de connecteur, et le fond prime sur la forme ; le PPTX
+peut y être retouché) ; des slides en Markdown (Marp), plus austères pour une démo.
+**Pourquoi :** la consigne demande un support déposé à part ; le contenu est repris des
+fichiers du dépôt, qui restent la référence.
+**Conséquence assumée :** les chiffres du deck sont à revérifier après toute mise à jour
+de la documentation.

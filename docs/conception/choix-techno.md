@@ -87,7 +87,7 @@ réécrire si le prototype est retenu). Le détail de chaque arbitrage est dans
 Le format standard d'un formulaire HTML avec un champ fichier : le corps est découpé en
 **parties** nommées (`file`, `password`, `expirationDays`), chacune en texte ou en
 octets bruts. Détail de la requête dans
-[`architecture.md`](architecture.md) (« Format de la requête »).
+[`flux.md`](flux.md#format-de-la-requête--multipartform-data).
 
 - **Le fichier voyage tel quel.** En JSON, il faudrait l'encoder en base64 : +33 %
   (1 Go deviendrait 1,33 Go à envoyer), et un corps à lire d'un seul bloc.

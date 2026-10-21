@@ -1,32 +1,22 @@
 # Maintenance
 
-Comment garder les dépendances de DataShare à jour sans casser l'application, comment
-analyser la qualité de son code et comment exploiter ses logs. Résultats du dernier scan : [`SECURITY.md`](SECURITY.md).
+## L'essentiel
 
-**Sommaire** : [Ce qu'on maintient](#ce-quon-maintient) · [Fréquence](#fréquence) ·
-[Procédure](#procédure) · [Risques](#risques) · [En suspens](#en-suspens) ·
+| | |
+|---|---|
+| **Fréquence** | scan des dépendances chaque semaine, sans attendre pour une faille critique ; versions de correction chaque mois ; versions majeures sur une branche dédiée |
+| **Procédure** | branche → scan → tri des failles → mise à jour → tests et budget du front → nouveau scan → PR ([Procédure](#procédure)) |
+| **Risques surveillés** | régression, paquet piégé, version forcée oubliée, migration majeure trop lourde, front alourdi, disque rempli par les logs ([Risques](#risques)) |
+| **En suspens** | retirer les versions forcées de Tomcat et Jackson au passage à Spring Boot 4.1.2 ([En suspens](#en-suspens)) |
+| **Versions livrées** | marquées par un tag git, `v0.1.0` pour le prototype ([Versions](#versions)) |
+
+Comment garder les dépendances de DataShare à jour sans casser l'application, analyser
+la qualité de son code et exploiter ses logs. Résultats du dernier scan :
+[`SECURITY.md`](SECURITY.md).
+
+**Sommaire** : [Fréquence](#fréquence) · [Risques](#risques) · [Procédure](#procédure) ·
+[En suspens](#en-suspens) · [Versions](#versions) · [Ce qu'on maintient](#ce-quon-maintient) ·
 [Qualité du code](#qualité-du-code-sonarqube) · [Logs](#logs)
-
-## Ce qu'on maintient
-
-| Brique | Version | Où la changer | À savoir |
-|---|---|---|---|
-| Spring Boot | 4.1.1 | `back/pom.xml`, `<parent>` | fixe la version de toutes les dépendances du back |
-| Java | 25 | `back/pom.xml`, `java.version` | version LTS |
-| springdoc-openapi | 3.1.1 | `back/pom.xml`, `springdoc.version` | hors du parent Spring Boot : sa version majeure suit celle de Spring Boot (3.x pour Spring Boot 4) |
-| Angular | 22.2 | `front/package.json` | une version majeure tous les 6 mois |
-| Node.js | 24 | poste de dev ([`README.md`](README.md)) | version LTS |
-| Cypress | 16.2 | `front/package.json` | script d'installation autorisé version par version |
-| PostgreSQL | 18 | `back/compose.yaml` | image Docker |
-| Trivy | 0.75.0 | commande de scan (ci-dessous) | figé par son empreinte, mis à jour à la main |
-| k6 | 2.3.0 | commande de test ([`PERF.md`](PERF.md)) | idem |
-| nginx | 1.30.6 | commande de mesure Lighthouse ([`PERF.md`](PERF.md)) | idem |
-| SonarQube Community Build | 26.9 | commande d'analyse ([Qualité du code](#qualité-du-code-sonarqube)) | idem |
-| Scanner SonarQube du front | 12.2 | idem | idem |
-| Plugin Maven SonarQube du back | 5.8 | `back/pom.xml`, `sonar-maven-plugin.version` | |
-
-`package-lock.json` fixe la version exacte de chaque paquet du front ; `npm ci` installe
-exactement celles-là.
 
 ## Fréquence
 
@@ -38,6 +28,19 @@ exactement celles-là.
 | à chaque version majeure (Angular, Spring Boot, Java) | branche dédiée, en suivant le guide de migration officiel |
 | chaque semaine | lecture des logs : erreurs `5xx`, fichiers orphelins ([Logs](#logs)) |
 | à la fin de chaque chantier, avant la PR | analyse SonarQube : 0 remarque ouverte ([Qualité du code](#qualité-du-code-sonarqube)) |
+
+## Risques
+
+| Risque | Parade |
+|---|---|
+| **régression** : une mise à jour change un comportement | tests unitaires, d'intégration et E2E à chaque montée de version ; une version majeure à la fois |
+| **paquet piégé** (attaque de la chaîne d'approvisionnement) | `npm ci` et le lockfile : pas de version inattendue ; scripts d'installation bloqués sauf autorisation (`allowScripts`) ; Trivy figé par son empreinte ; ne pas adopter une version publiée depuis moins d'une semaine (le temps qu'un piège soit repéré) |
+| **version forcée oubliée** dans `pom.xml` | commentaire à côté, et rubrique [En suspens](#en-suspens) |
+| **mise à jour majeure trop lourde** (migration Angular ou Spring Boot) | guide de migration officiel, branche dédiée, ne pas sauter de version majeure |
+| **front alourdi** par une nouvelle dépendance | budget de build (`front/angular.json`) : avertissement à 420 kB, échec à 520 kB |
+| **disque rempli par les logs** | rotation automatique ([Logs](#logs)) ; en production, plafond de taille total (`logging.logback.rollingpolicy.total-size-cap`) |
+| **dette qui s'accumule** sans que personne la voie | analyse SonarQube avant chaque PR ; en CI, une *quality gate* bloquante ([`perspectives.md`](docs/perspectives.md)) |
+| **scan oublié** (rien n'est automatisé) | fréquence ci-dessus ; automatisation dans [`perspectives.md`](docs/perspectives.md) |
 
 ## Procédure
 
@@ -67,6 +70,9 @@ docker run --rm \
      /src
 ```
 
+<details>
+<summary>Rôle de chaque option</summary>
+
 | Option | Rôle |
 |---|---|
 | `:ro` | dépôt et cache Maven en lecture seule : Trivy ne peut rien modifier |
@@ -74,6 +80,8 @@ docker run --rm \
 | `@sha256:…` | l'image exacte de Trivy 0.75.0, jamais une version plus récente prise d'office |
 | `--include-dev-deps` | analyse aussi les outils de dev du front, ignorés par défaut |
 | `--skip-dirs` | ignore les dossiers générés : moins de bruit pour la recherche de secrets |
+
+</details>
 
 **4. Tri** : pour chaque faille, trois questions : la bibliothèque part-elle en
 production ? la faille est-elle atteignable dans notre usage ? une version corrigée
@@ -100,25 +108,55 @@ l'analyseur d'esbuild montrent laquelle (détail dans [`PERF.md`](PERF.md#le-poi
 
 **8. Commit et PR** : `fix:` pour une faille, `chore:` pour une mise à jour de routine.
 
-## Risques
-
-| Risque | Parade |
-|---|---|
-| **régression** : une mise à jour change un comportement | tests unitaires, d'intégration et E2E à chaque montée de version ; une version majeure à la fois |
-| **paquet piégé** (attaque de la chaîne d'approvisionnement) | `npm ci` et le lockfile : pas de version inattendue ; scripts d'installation bloqués sauf autorisation (`allowScripts`) ; Trivy figé par son empreinte ; ne pas adopter une version publiée depuis moins d'une semaine (le temps qu'un piège soit repéré) |
-| **version forcée oubliée** dans `pom.xml` | commentaire à côté, et rubrique « En suspens » ci-dessous |
-| **mise à jour majeure trop lourde** (migration Angular ou Spring Boot) | guide de migration officiel, branche dédiée, ne pas sauter de version majeure |
-| **front alourdi** par une nouvelle dépendance | budget de build (`front/angular.json`) : avertissement à 420 kB, échec à 520 kB |
-| **disque rempli par les logs** | rotation automatique (ci-dessous) ; en production, plafond de taille total (`logging.logback.rollingpolicy.total-size-cap`) |
-| **dette qui s'accumule** sans que personne la voie | analyse SonarQube avant chaque PR ; en CI, une *quality gate* bloquante ([`perspectives.md`](docs/perspectives.md)) |
-| **scan oublié** (rien n'est automatisé) | fréquence ci-dessus ; automatisation dans [`perspectives.md`](docs/perspectives.md) |
-
 ## En suspens
 
 | Action | Quand |
 |---|---|
 | retirer `tomcat.version` et `jackson-bom.version` de `back/pom.xml` | au passage à Spring Boot 4.1.2 |
 | passer Trivy et SonarQube (serveur, scanner) en version plus récente : relever la nouvelle empreinte sur Docker Hub | au prochain scan, sur une version publiée depuis plus d'une semaine |
+| réanalyser le back avec SonarQube : la purge des fichiers expirés (PR #26) est arrivée après la dernière analyse | à la prochaine analyse |
+
+## Versions
+
+Chaque version livrée est marquée par un **tag git annoté**, numéroté selon le
+versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`). Le tag sert de repère fixe : voir
+ce qui a changé depuis (`git diff v0.1.0..main`), repartir de cette version
+(`git switch -c fix/... v0.1.0`).
+
+| Version | Contenu |
+|---|---|
+| `v0.1.0` | le prototype livré : US01 à US06, purge des fichiers expirés (US10 partielle). `0.x` : rien n'est encore figé, l'API peut changer |
+
+Poser le tag, sur `main` à jour, une fois la PR mergée :
+
+```bash
+git tag -a v0.1.0 -m "DataShare PoC: US01-06 and partial US10"
+git push origin v0.1.0
+```
+
+Ensuite : `0.2.0` pour une nouvelle fonctionnalité, `0.1.1` pour une correction ; `1.0.0`
+quand l'application sera mise en ligne et son API stable.
+
+## Ce qu'on maintient
+
+| Brique | Version | Où la changer | À savoir |
+|---|---|---|---|
+| Spring Boot | 4.1.1 | `back/pom.xml`, `<parent>` | fixe la version de toutes les dépendances du back |
+| Java | 25 | `back/pom.xml`, `java.version` | version LTS |
+| springdoc-openapi | 3.1.1 | `back/pom.xml`, `springdoc.version` | hors du parent Spring Boot : sa version majeure suit celle de Spring Boot (3.x pour Spring Boot 4) |
+| Angular | 22.2 | `front/package.json` | une version majeure tous les 6 mois |
+| Node.js | 24 | poste de dev ([`README.md`](README.md)) | version LTS |
+| Cypress | 16.2 | `front/package.json` | script d'installation autorisé version par version |
+| PostgreSQL | 18 | `back/compose.yaml` | image Docker |
+| Trivy | 0.75.0 | commande de scan ([Procédure](#procédure)) | figé par son empreinte, mis à jour à la main |
+| k6 | 2.3.0 | commande de test ([`PERF.md`](PERF.md)) | idem |
+| nginx | 1.30.6 | commande de mesure Lighthouse ([`PERF.md`](PERF.md)) | idem |
+| SonarQube Community Build | 26.9 | commande d'analyse ([Qualité du code](#qualité-du-code-sonarqube)) | idem |
+| Scanner SonarQube du front | 12.2 | idem | idem |
+| Plugin Maven SonarQube du back | 5.8 | `back/pom.xml`, `sonar-maven-plugin.version` | |
+
+`package-lock.json` fixe la version exacte de chaque paquet du front ; `npm ci` installe
+exactement celles-là.
 
 ## Qualité du code (SonarQube)
 
@@ -134,6 +172,9 @@ des choix : [`decisions.md`](docs/decisions.md).
 | la couverture | **SonarQube ne la calcule pas** : il affiche les rapports de JaCoCo et de Vitest ([`TESTING.md`](TESTING.md#couverture)) |
 
 ### Résultats (17 octobre 2026)
+
+Analyse antérieure à la purge des fichiers expirés (PR #26) : ce code n'a pas encore été
+analysé (voir [En suspens](#en-suspens)).
 
 | | Back | Front |
 |---|---|---|
@@ -158,7 +199,8 @@ des choix : [`decisions.md`](docs/decisions.md).
 | champ fichier sans label (1, faux positif) | il porte `hidden`, donc hors de l'arbre d'accessibilité ; ce sont les boutons visibles qui ouvrent le sélecteur |
 | duplication de 3 % (une mesure, pas une remarque) | 27 lignes communes à `login.html` et `register.html` : deux pages qui évolueront séparément, un composant commun serait de la sur-ingénierie |
 
-### Procédure
+<details>
+<summary>Lancer une analyse SonarQube</summary>
 
 **1. Serveur**, une fois ; le port n'est ouvert que sur la machine :
 
@@ -216,7 +258,10 @@ Configuration versionnée : propriétés `sonar.*` de `back/pom.xml`,
 `front/sonar-project.properties`. Pendant l'écriture du code, l'extension *SonarQube for
 IDE* de VS Code applique les mêmes règles.
 
-### Pièges
+</details>
+
+<details>
+<summary>Pièges rencontrés</summary>
 
 | Piège | Parade |
 |---|---|
@@ -225,6 +270,8 @@ IDE* de VS Code applique les mêmes règles.
 | image du scanner front publiée en amd64 seulement | `--platform linux/amd64` : émulée sur un Mac Apple Silicon, plus lente |
 | la *quality gate* par défaut juge le **nouveau** code | à la première analyse, « Passed » ne prouve rien : lire les remarques |
 
+</details>
+
 ## Logs
 
 | | |
@@ -232,13 +279,12 @@ IDE* de VS Code applique les mêmes règles.
 | Fichier | `back/logs/datashare.log`, une ligne JSON par événement ; chemin modifiable par `LOG_FILE` (`back/.env`) |
 | Rotation | automatique (Spring Boot) : nouveau fichier à 10 Mo, archives gardées 7 jours |
 | Logs des tests | `back/target/test-logs/`, effacés par `mvn clean` |
-| Analyse | `./perf/analyze-logs.sh` depuis la racine (détail dans [`PERF.md`](PERF.md#relancer-lanalyse)) |
+| Analyse | `./perf/analyze-logs.sh` depuis la racine (détail dans [`PERF.md`](PERF.md#logs-structurés-et-suivi-des-métriques)) |
 
 **Vider le log sans arrêter le back : `: > back/logs/datashare.log`, jamais `rm`.**
-Logback ouvre le fichier au démarrage et le garde ouvert. `rm` ne retire que son nom :
-le back continue d'écrire dans un fichier devenu invisible, perdu à l'arrêt, et le disque
-n'est pas libéré. `: >` vide le contenu en gardant le fichier. Après un `rm` par erreur,
-redémarrer le back recrée le fichier.
+Logback garde le fichier ouvert : `rm` ne retire que son nom, le back continue d'écrire
+dans un fichier devenu invisible, et le disque n'est pas libéré. `: >` vide le contenu en
+gardant le fichier. Après un `rm` par erreur, redémarrer le back recrée le fichier.
 
 **Corriger un fichier orphelin** (effacé de la base, resté sur le disque après une panne
 du disque, voir [`architecture.md`](docs/conception/architecture.md#cohérence-entre-disque-et-base)) :
