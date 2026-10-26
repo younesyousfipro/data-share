@@ -129,9 +129,9 @@ Un bloc par user story : chaque test, son niveau et les cas qu'il couvre.
 | Test | Niveau | Cas couverts |
 |---|---|---|
 | `AuthServiceTest` | unitaire | email enregistré en minuscules et mot de passe haché · email déjà pris refusé sans enregistrement · email pris par une inscription simultanée (contrainte d'unicité) |
-| `AuthControllerTest` | intégration | `201` et hash BCrypt en base · `409` même avec une casse différente, au format `ErrorDetailsDTO` · `400` : email invalide, email entouré d'espaces, mot de passe trop court (sans renvoyer la valeur), mot de passe de plus de 18 caractères, JSON mal formé |
+| `AuthControllerTest` | intégration | `201` et hash BCrypt en base · `409` même avec une casse différente, au format `ErrorDetailsDTO` · `400` : email invalide, domaine sans point (`marie@mail`), email entouré d'espaces, mot de passe trop court (sans renvoyer la valeur), mot de passe de plus de 18 caractères, JSON mal formé |
 | `auth.service.spec.ts` (front) | unitaire | `POST /api/auth/register` avec l'email et le mot de passe |
-| `register.spec.ts` (front) | unitaire | aucune erreur avant de quitter un champ · formulaire vide : trois erreurs · email mal formé, erreur reliée au champ (`aria-invalid`, `aria-describedby`) · espaces retirés de l'email · mot de passe hors 8 à 18 caractères · confirmation différente · aucun appel si le formulaire est invalide · envoi de l'email et du mot de passe seuls, puis redirection vers `/login?registered=true` · `409` : « email déjà utilisé » · autre erreur : message générique · double clic : une seule requête |
+| `register.spec.ts` (front) | unitaire | aucune erreur avant de quitter un champ · formulaire vide : trois erreurs · email mal formé, erreur reliée au champ (`aria-invalid`, `aria-describedby`) · domaine sans point refusé · espaces retirés de l'email · mot de passe hors 8 à 18 caractères · confirmation différente · aucun appel si le formulaire est invalide · envoi de l'email et du mot de passe seuls, puis redirection vers `/login?registered=true` · `409` : « email déjà utilisé » · autre erreur : message générique · double clic : une seule requête |
 
 </details>
 

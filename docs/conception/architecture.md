@@ -123,7 +123,7 @@ technique. C'est le back qui transforme chaque refus en réponse claire (`400`, 
 | Où | Traitement | Pourquoi là |
 |---|---|---|
 | Front | retire les espaces, vérifie le format | confort : un email collé avec un espace en trop n'est pas bloqué |
-| Back, DTO | vérifie le format (`@Email` : `400` si espaces ou format faux) | sécurité : l'API peut être appelée sans le front |
+| Back, DTO | vérifie le format (`@Email` : `400` si espaces, format faux ou domaine sans point) | sécurité : l'API peut être appelée sans le front |
 | Back, service | met en minuscules (`normalizeEmail`) | la forme de référence est fixée à un seul endroit, le serveur, pour tous les clients |
 | Base | unicité (`uk_account_email`) | garantie finale |
 

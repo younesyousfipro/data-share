@@ -76,6 +76,13 @@ class AuthControllerTest {
 	}
 
 	@Test
+	void register_returns400WhenEmailDomainHasNoDot() throws Exception {
+		register("marie@mail", PASSWORD)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(containsString("email")));
+	}
+
+	@Test
 	void register_returns400WhenEmailHasSurroundingSpaces() throws Exception {
 		register(" " + EMAIL + " ", PASSWORD)
 				.andExpect(status().isBadRequest());

@@ -126,6 +126,7 @@ ce qui a changé depuis (`git diff v0.1.0..main`), repartir de cette version
 | Version | Contenu |
 |---|---|
 | `v0.1.0` | le prototype livré : US01 à US06, purge des fichiers expirés (US10 partielle). `0.x` : rien n'est encore figé, l'API peut changer |
+| `v0.1.1` | correction : l'inscription refuse un email dont le domaine n'a pas de point (`marie@mail`) |
 
 Poser le tag, sur `main` à jour, une fois la PR mergée :
 

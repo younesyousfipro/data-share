@@ -283,8 +283,9 @@ components:
         email:
           type: string
           format: email
+          pattern: '.+@.+\..+'
           maxLength: 254
-          description: Stored lower-case, so it is unique regardless of case.
+          description: Stored lower-case, so it is unique regardless of case. The domain must contain a dot.
           example: marie@mail.fr
         password:
           type: string
