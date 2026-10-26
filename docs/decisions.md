@@ -1593,3 +1593,20 @@ peut y être retouché) ; des slides en Markdown (Marp), plus austères pour une
 fichiers du dépôt, qui restent la référence.
 **Conséquence assumée :** les chiffres du deck sont à revérifier après toute mise à jour
 de la documentation.
+
+---
+
+## 2026-10-26 — Inscription : le domaine de l'email doit contenir un point
+
+**Décidé :** à l'inscription, l'email doit avoir un point après le `@`. Même motif
+`.+@.+\..+` des deux côtés, en plus de la validation existante : `@Email(regexp = ...)`
+côté back, `Validators.pattern` côté front. Publié en `v0.1.1`.
+**Écarté :** une expression régulière « complète » (illisible, et refuse quand même des
+adresses valides) ; la même règle à la connexion (un compte déjà créé avec ce format ne
+pourrait plus se connecter, et un email inconnu y donne déjà `401`) ; un email de
+confirmation (seule preuve que l'adresse existe, hors périmètre du prototype).
+**Pourquoi :** `younes@gmail` était accepté. `@Email` et `Validators.email` suivent la
+norme, pour laquelle un domaine sans point est valide (`admin@localhost`, sur un réseau
+interne) ; une plateforme publique attend un domaine avec extension.
+**Conséquence assumée :** un email au domaine inexistant mais bien formé
+(`marie@mail.zz`) reste accepté.
