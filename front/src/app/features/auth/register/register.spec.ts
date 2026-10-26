@@ -74,6 +74,12 @@ describe('Register', () => {
     expect(input.getAttribute('aria-describedby')).toBe('email-error');
   });
 
+  it('should reject an email whose domain has no dot', async () => {
+    await fillField('email', 'marie@mail');
+
+    expect(errorOf('email')).toBe('Saisissez un email valide.');
+  });
+
   it('should trim spaces around the email', async () => {
     await fillField('email', '  marie@mail.fr ');
 

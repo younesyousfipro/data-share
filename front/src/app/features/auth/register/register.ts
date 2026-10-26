@@ -25,7 +25,16 @@ export class Register {
 
   protected readonly form = inject(NonNullableFormBuilder).group(
     {
-      email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
+      // pattern: Validators.email alone accepts a domain without a dot ("marie@mail")
+      email: [
+        '',
+        [
+          Validators.required,
+          Validators.email,
+          Validators.pattern('.+@.+\\..+'),
+          Validators.maxLength(254),
+        ],
+      ],
       password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(18)]],
       confirmPassword: ['', Validators.required],
     },
